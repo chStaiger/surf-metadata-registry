@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "setuptools-scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "surfiamviz"
+name = "surfmeta"
 authors = [
     { name = "Christine Staiger", email = "christine.staiger@surf.nl" },
 ]
@@ -19,13 +19,14 @@ classifiers = [
 ]
 
 dependencies = [
+    "ckanapi>=4.8",
 ]
 
 dynamic = ["version"]
 
 [project.urls]
-GitHub = "https://github.com/chStaiger/surfiam-graph-vis"
-documentation = "https://github.com/chStaiger/surgiam-graph-vis"
+GitHub = "https://github.com/chStaiger/surf-metadata-registry"
+documentation = "https://github.com/chStaiger/surf-metadata-registry"
 
 [project.optional-dependencies]
 test = [
