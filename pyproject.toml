@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "surfiamviz"
+authors = [
+    { name = "Christine Staiger", email = "christine.staiger@surf.nl" },
+]
+description = "Command line interface to register data information in CKAN."
+readme = "README.md"
+requires-python = ">=3.13"
+keywords = ["ckan", "rdm", "metadata"]
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Development Status :: 3 - Alpha",
+]
+
+dependencies = [
+]
+
+dynamic = ["version"]
+
+[project.urls]
+GitHub = "https://github.com/chStaiger/surfiam-graph-vis"
+documentation = "https://github.com/chStaiger/surgiam-graph-vis"
+
+[project.optional-dependencies]
+test = [
+    "pylint",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+surfmeta = "surfmeta.__main__:main"
+
+[tool.setuptools]
+packages = ["surfmeta"]
+
+[tool.setuptools_scm]
+write_to = "surfmeta/_version.py"
+
+[tool.pylint.'MASTER']
+ignore-patterns="_version.py"
+
+[tool.pylint.'BASIC']
+good-names=["e", "f", "m"]
+
+[tool.pylint.'MESSAGES CONTROL']
+disable="too-many-positional-arguments"
+
+max-line-length=110
+max-locals=35
+max-args=10
+
+[tool.ruff]
+exclude = ["_version.py", "ui_files"]
+line-length = 110
+lint.select = ["D", "E", "F", "W", "I", "N"]
+lint.ignore = ["D203", "D213"]
