@@ -1,5 +1,5 @@
 # surf-metadata-registry
-
+[![Python package](https://github.com/chStaiger/surf-metadata-registry/actions/workflows/linter.yml/badge.svg)](https://github.com/chStaiger/surf-metadata-registry/actions/workflows/linter.yml)
 # Dpendencies
 
 - Requires python 3.13 or higher because of the module `ckanapi`.
