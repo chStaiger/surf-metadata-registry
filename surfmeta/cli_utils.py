@@ -1,9 +1,13 @@
+"""Useful functions for cli."""
+
 import sys
 import uuid
+
 from ckanapi import ValidationError
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf
+
 
 def get_ckan_connection():
     """Instantiate the ckan connection from the current ckan config."""
@@ -27,7 +31,9 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
     # --- Organisation selection ---
     orgs = ckan_conn.list_organisations()
     if not orgs:
-        raise RuntimeError("❌ No organisations found for your account. Cannot create dataset without an organisation.")
+        raise RuntimeError(
+            "❌ No organisations found for your account. Cannot create dataset without an organisation."
+        )
 
     print("\n📂 Available Organisations:")
     for idx, org in enumerate(orgs, 1):
@@ -74,9 +80,7 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
         "title": f"Dataset {dataset_name}",
         "author": author,
         "owner_org": chosen_org,
-        "extras": [
-            {"key": "uuid", "value": dataset_uuid}
-        ]
+        "extras": [{"key": "uuid", "value": dataset_uuid}],
     }
 
     # Add group if selected
@@ -88,7 +92,6 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
 
 def create_dataset(ckan_conn: Ckan, meta: dict):
     """Create the dataset."""
-
     # Try creating the dataset
     try:
         response = ckan_conn.create_dataset(meta)

@@ -161,10 +161,9 @@ class Ckan:
 
         """
         try:
-            response = self.api.action.package_search(rows=1000,
-                                                      include_private=include_private)
+            response = self.api.action.package_search(rows=1000, include_private=include_private)
             datasets = response.get("results", [])
-
+            search_params = {}
             # If limit is higher than 1000, paginate
             limit = 1000
             if limit and limit > 1000:
@@ -333,6 +332,7 @@ class Ckan:
         ------
         HTTPError
             If the API call fails.
+
         """
         try:
             orgs = self.api.action.organization_list()
@@ -367,6 +367,7 @@ class Ckan:
         ------
         HTTPError
             If the API call fails.
+
         """
         try:
             groups = self.api.action.group_list()
@@ -382,4 +383,3 @@ class Ckan:
             return groups
         except Exception as e:
             raise HTTPError(f"Error listing groups: {e}")
-

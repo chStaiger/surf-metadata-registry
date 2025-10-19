@@ -3,13 +3,12 @@
 import argparse
 import sys
 from getpass import getpass
-import uuid
 
 from ckanapi import NotAuthorized
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
-from surfmeta.cli_utils import get_ckan_connection, user_input_meta, create_dataset
+from surfmeta.cli_utils import create_dataset, get_ckan_connection, user_input_meta
 
 MAIN_HELP_MESSAGE = """
 Create metadata for data on SURF infrastructure.
@@ -34,12 +33,11 @@ Example usage:
 
 CKANCONFIG = CKANConf()
 
+
 def build_parser():
     """Create parser and subparsers and arguments."""
     parser = argparse.ArgumentParser(
-        prog="surfmeta",
-        description=MAIN_HELP_MESSAGE,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        prog="surfmeta", description=MAIN_HELP_MESSAGE, formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
     # Top-level subparser: `ckan`
@@ -79,29 +77,14 @@ def build_parser():
     parser_alias.set_defaults(func=ckan_alias)
 
     # `surfmeta ckan orgs`
-    parser_ckan_orgs = ckan_subparsers.add_parser(
-        "orgs",
-        help="List organizations from CKAN"
-    )
-    parser_ckan_orgs.add_argument(
-        "--full",
-        action="store_true",
-        help="Include full organization metadata"
-    )
+    parser_ckan_orgs = ckan_subparsers.add_parser("orgs", help="List organizations from CKAN")
+    parser_ckan_orgs.add_argument("--full", action="store_true", help="Include full organization metadata")
     parser_ckan_orgs.set_defaults(func=ckan_list_orgs)
 
     # `surfmeta ckan groups`
-    parser_ckan_groups = ckan_subparsers.add_parser(
-        "groups",
-        help="List groups from CKAN"
-    )
-    parser_ckan_groups.add_argument(
-        "--full",
-        action="store_true",
-        help="Include full group metadata"
-    )
+    parser_ckan_groups = ckan_subparsers.add_parser("groups", help="List groups from CKAN")
+    parser_ckan_groups.add_argument("--full", action="store_true", help="Include full group metadata")
     parser_ckan_groups.set_defaults(func=ckan_list_groups)
-
 
     # `surfmeta ckan groups
 
@@ -110,10 +93,7 @@ def build_parser():
     # ───────────────────────────────
 
     # `surfmeta create`
-    parser_create = subparsers.add_parser(
-        "create",
-        help="Create a new metadata entry interactively in CKAN"
-    )
+    parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
     parser_create.set_defaults(func=cmd_create)
 
     return parser
@@ -132,18 +112,22 @@ def main():
         print(f"DEBUG: no function for {args}")
     sys.exit(1)
 
+
 # CKAN CONFIG FUNCTIONS
 def ckan_list(args):
     """List all available ckan configurations."""
     show_available(CKANCONFIG)
 
+
 def ckan_switch(args):
     """Switch between ckan configurations."""
     CKANCONFIG.set_ckan(args.url_or_alias)
 
+
 def ckan_alias(args):
     """Create alias for ckan configuration."""
     CKANCONFIG.set_alias(args.alias, args.url)
+
 
 def ckan_init(args):
     """Initialise the ckan configuration with a valid token."""
@@ -162,12 +146,14 @@ def ckan_init(args):
     except NotAuthorized:
         print(f"AUTH_ERR: Cannot authorize user for {url}. Token might be wrong.")
 
+
 def ckan_remove(args):
     """Remove a ckan configuration."""
     CKANCONFIG.delete_alias(args.url_or_alias)
 
+
 def ckan_list_orgs(args):
-    """List ckan organisations"""
+    """List ckan organisations."""
     ckan_conn = get_ckan_connection()
     try:
         orgs = ckan_conn.list_organisations(include_extras=args.full)
@@ -184,7 +170,9 @@ def ckan_list_orgs(args):
     except Exception as e:
         print(f"❌ Error listing organizations: {e}")
 
+
 def ckan_list_groups(args):
+    """List ckan groups."""
     ckan_conn = get_ckan_connection()
     try:
         groups = ckan_conn.list_groups(include_extras=args.full)
