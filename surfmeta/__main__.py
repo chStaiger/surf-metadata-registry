@@ -18,6 +18,7 @@ Usage: surfmeta [subcommand] [options]
 
 Available subcommands:
     ckan        Manage CKAN configurations
+    create      Create a new dataset only containing metadata in CKAN
 
 Example usage:
     surfmeta ckan list
@@ -25,6 +26,10 @@ Example usage:
     surfmeta ckan init mytoken
     surfmeta ckan remove demo
     surfmeta ckan alias myalias https://demo.ckan.org
+    surfmeta ckan orgs
+    surfmeta ckan groups
+
+    surfmeta create
 """
 
 CKANCONFIG = CKANConf()
