@@ -48,11 +48,11 @@ jobs:
 
     - name: Lint with Ruff
       run: |
-        ruff check surfiamviz
+        ruff check surfmeta
 
     - name: Lint with PyLint
       run: |
-        pylint surfiamviz
+        pylint surfmeta
 
     - name: Test with pytest
       run: |
