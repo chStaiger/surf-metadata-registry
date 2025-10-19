@@ -15,7 +15,9 @@ DEMO_CKAN = "https://demo.ckan.org"
 class CKANConf:
     """Interface to the CKAN config file."""
 
-    def __init__(self, parser: argparse.ArgumentParser = None, config_path: Union[str, Path] = CKAN_CONFIG_FP):
+    def __init__(
+        self, parser: argparse.ArgumentParser = None, config_path: Union[str, Path] = CKAN_CONFIG_FP
+    ):
         """Read CKAN configuration file and validate it."""
         self.config_path = Path(config_path)
         self.parser = parser
@@ -29,7 +31,7 @@ class CKANConf:
                 ckan_conf = json.load(f)
                 self.ckans = ckan_conf["ckans"]
                 self.cur_ckan = ckan_conf.get("cur_ckan", DEMO_CKAN)
-        except Exception as exc:
+        except Exception as exc: # pylint: disable=broad-exception-caught
             warnings.warn(f"{self.config_path} not found or invalid. Resetting. Reason: {exc}")
             self.reset()
 
@@ -106,12 +108,12 @@ class CKANConf:
         url_or_alias = DEMO_CKAN if url_or_alias is None else str(url_or_alias)
         try:
             url, _ = self.get_entry(url_or_alias)
-        except KeyError:
+        except KeyError as exc:
             url = url_or_alias
             if not self.is_valid_url(url):
                 if self.parser:
-                    raise self.parser.error(f"Invalid CKAN URL: {url}")
-                raise ValueError(f"Invalid CKAN URL: {url}")
+                    raise self.parser.error(f"Invalid CKAN URL: {url}") from exc
+                raise ValueError(f"Invalid CKAN URL: {url}") from exc
             self.ckans[url] = {}
         if self.cur_ckan != url:
             self.cur_ckan = url
@@ -139,7 +141,7 @@ class CKANConf:
         """Remove alias and/or CKAN entry."""
         try:
             url, entry = self.get_entry(alias)
-        except KeyError as exc:
+        except KeyError:
             if self.parser:
                 self.parser.error(f"Alias '{alias}' not found.")
             raise
@@ -166,4 +168,3 @@ def show_available(ckan_conf: CKANConf):
         prefix = "*" if ckan_conf.cur_ckan in (url, entry.get("alias")) else " "
         alias = entry.get("alias", "[no alias]")
         print(f"{prefix} {alias} -> {url}")
-
