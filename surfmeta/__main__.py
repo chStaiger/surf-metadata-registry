@@ -3,8 +3,10 @@
 import argparse
 import sys
 from getpass import getpass
-from importlib.metadata import version
 
+from ckanapi import NotAuthorized
+
+from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
 
 MAIN_HELP_MESSAGE = """
@@ -26,6 +28,7 @@ Example usage:
 CKANCONFIG = CKANConf()
 
 def build_parser():
+    """Create parser and subparsers and arguments."""
     parser = argparse.ArgumentParser(
         prog="surfmeta",
         description=MAIN_HELP_MESSAGE,
@@ -81,15 +84,19 @@ def main():
 
 # CKAN CONFIG FUNCTIONS
 def ckan_list(args):
+    """List all available ckan configurations."""
     show_available(CKANCONFIG)
 
 def ckan_switch(args):
+    """Switch between ckan configurations."""
     CKANCONFIG.set_ckan(args.url_or_alias)
 
 def ckan_alias(args):
+    """Create alias for ckan configuration."""
     CKANCONFIG.set_alias(args.alias, args.url)
 
 def ckan_init(args):
+    """Initialise the ckan configuration with a valid token."""
     CKANCONFIG.set_ckan(args.url_or_alias)
     url, entry = CKANCONFIG.get_entry()
     if sys.stdin.isatty() or "ipykernel" in sys.modules:
@@ -97,11 +104,14 @@ def ckan_init(args):
     else:
         print(f"Your CKAN token for {args.url_or_alias} : ")
         token = sys.stdin.readline().rstrip()
-    entry["token"] = token
-    CKANCONFIG.ckans[url] = entry  # Update the entry with the token
-
-    # Save the updated CKAN configuration
-    CKANCONFIG.save()
+    try:
+        _ = Ckan(url, token)
+        entry["token"] = token
+        CKANCONFIG.ckans[url] = entry  # Update the entry with the token
+        CKANCONFIG.save()
+    except NotAuthorized:
+        print(f"AUTH_ERR: Cannot authorize user for {url}. Token might be wrong.")
 
 def ckan_remove(args):
+    """Remove a ckan configuration."""
     CKANCONFIG.delete_alias(args.url_or_alias)

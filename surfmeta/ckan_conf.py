@@ -15,7 +15,9 @@ DEMO_CKAN = "https://demo.ckan.org"
 class CKANConf:
     """Interface to the CKAN config file."""
 
-    def __init__(self, parser: argparse.ArgumentParser = None, config_path: Union[str, Path] = CKAN_CONFIG_FP):
+    def __init__(
+        self, parser: argparse.ArgumentParser = None, config_path: Union[str, Path] = CKAN_CONFIG_FP
+    ):
         """Read CKAN configuration file and validate it."""
         self.config_path = Path(config_path)
         self.parser = parser
@@ -139,7 +141,7 @@ class CKANConf:
         """Remove alias and/or CKAN entry."""
         try:
             url, entry = self.get_entry(alias)
-        except KeyError as exc:
+        except KeyError:
             if self.parser:
                 self.parser.error(f"Alias '{alias}' not found.")
             raise
@@ -166,4 +168,3 @@ def show_available(ckan_conf: CKANConf):
         prefix = "*" if ckan_conf.cur_ckan in (url, entry.get("alias")) else " "
         alias = entry.get("alias", "[no alias]")
         print(f"{prefix} {alias} -> {url}")
-
