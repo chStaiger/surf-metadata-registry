@@ -314,3 +314,72 @@ class Ckan:
         """
         info = self.get_dataset_info(dataset_id)
         return info.get("resources", [])
+
+    def list_organisations(self, include_extras: bool = False) -> list:
+        """List all organizations visible to the authenticated user.
+
+        Parameters
+        ----------
+        include_extras : bool, optional
+            If True, returns full metadata for each organization using organization_show.
+            If False, returns only the list of organization names.
+
+        Returns
+        -------
+        list
+            A list of organization names or full metadata dictionaries.
+
+        Raises
+        ------
+        HTTPError
+            If the API call fails.
+        """
+        try:
+            orgs = self.api.action.organization_list()
+            if include_extras:
+                orgs_full = []
+                for org_name in orgs:
+                    try:
+                        org_info = self.api.action.organization_show(id=org_name)
+                        orgs_full.append(org_info)
+                    except Exception as e:
+                        print(f"⚠️ Could not retrieve info for org '{org_name}': {e}")
+                return orgs_full
+            return orgs
+        except Exception as e:
+            raise HTTPError(f"Error listing organizations: {e}")
+
+    def list_groups(self, include_extras: bool = False) -> list:
+        """List all groups available in the CKAN instance.
+
+        Parameters
+        ----------
+        include_extras : bool, optional
+            If True, returns full metadata for each group using group_show.
+            If False, returns only the list of group names.
+
+        Returns
+        -------
+        list
+            A list of group names or full metadata dictionaries.
+
+        Raises
+        ------
+        HTTPError
+            If the API call fails.
+        """
+        try:
+            groups = self.api.action.group_list()
+            if include_extras:
+                groups_full = []
+                for group_name in groups:
+                    try:
+                        group_info = self.api.action.group_show(id=group_name)
+                        groups_full.append(group_info)
+                    except Exception as e:
+                        print(f"⚠️ Could not retrieve info for group '{group_name}': {e}")
+                return groups_full
+            return groups
+        except Exception as e:
+            raise HTTPError(f"Error listing groups: {e}")
+

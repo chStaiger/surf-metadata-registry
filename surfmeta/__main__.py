@@ -3,11 +3,13 @@
 import argparse
 import sys
 from getpass import getpass
+import uuid
 
 from ckanapi import NotAuthorized
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
+from surfmeta.cli_utils import get_ckan_connection, user_input_meta, create_dataset
 
 MAIN_HELP_MESSAGE = """
 Create metadata for data on SURF infrastructure.
@@ -38,6 +40,11 @@ def build_parser():
     # Top-level subparser: `ckan`
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    # ───────────────────────────────
+    # CKAN subparser group
+    # surfmeta ckan <subcommand>
+    # ───────────────────────────────
+
     ckan_parser = subparsers.add_parser("ckan", help="CKAN configuration commands")
     ckan_subparsers = ckan_parser.add_subparsers(dest="ckan_command", required=True)
 
@@ -66,6 +73,44 @@ def build_parser():
     parser_alias.add_argument("url", help="URL to associate with alias")
     parser_alias.set_defaults(func=ckan_alias)
 
+    # `surfmeta ckan orgs`
+    parser_ckan_orgs = ckan_subparsers.add_parser(
+        "orgs",
+        help="List organizations from CKAN"
+    )
+    parser_ckan_orgs.add_argument(
+        "--full",
+        action="store_true",
+        help="Include full organization metadata"
+    )
+    parser_ckan_orgs.set_defaults(func=ckan_list_orgs)
+
+    # `surfmeta ckan groups`
+    parser_ckan_groups = ckan_subparsers.add_parser(
+        "groups",
+        help="List groups from CKAN"
+    )
+    parser_ckan_groups.add_argument(
+        "--full",
+        action="store_true",
+        help="Include full group metadata"
+    )
+    parser_ckan_groups.set_defaults(func=ckan_list_groups)
+
+
+    # `surfmeta ckan groups
+
+    # ───────────────────────────────
+    # surfmeta create
+    # ───────────────────────────────
+
+    # `surfmeta create`
+    parser_create = subparsers.add_parser(
+        "create",
+        help="Create a new metadata entry interactively in CKAN"
+    )
+    parser_create.set_defaults(func=cmd_create)
+
     return parser
 
 
@@ -79,8 +124,8 @@ def main():
     if hasattr(args, "func"):
         args.func(args)
     else:
-        parser.print_help(sys.stderr)
-        sys.exit(1)
+        print(f"DEBUG: no function for {args}")
+    sys.exit(1)
 
 # CKAN CONFIG FUNCTIONS
 def ckan_list(args):
@@ -115,3 +160,45 @@ def ckan_init(args):
 def ckan_remove(args):
     """Remove a ckan configuration."""
     CKANCONFIG.delete_alias(args.url_or_alias)
+
+def ckan_list_orgs(args):
+    """List ckan organisations"""
+    ckan_conn = get_ckan_connection()
+    try:
+        orgs = ckan_conn.list_organisations(include_extras=args.full)
+        if not orgs:
+            print("⚠️ No organizations found.")
+            return
+
+        if args.full:
+            for org in orgs:
+                print(f"- {org['name']} ({org.get('title', 'No title')})")
+        else:
+            for name in orgs:
+                print(f"- {name}")
+    except Exception as e:
+        print(f"❌ Error listing organizations: {e}")
+
+def ckan_list_groups(args):
+    ckan_conn = get_ckan_connection()
+    try:
+        groups = ckan_conn.list_groups(include_extras=args.full)
+        if not groups:
+            print("⚠️ No groups found.")
+            return
+
+        if args.full:
+            for group in groups:
+                print(f"- {group['name']} ({group.get('title', 'No title')})")
+        else:
+            for name in groups:
+                print(f"- {name}")
+    except Exception as e:
+        print(f"❌ Error listing groups: {e}")
+
+
+def cmd_create(args):
+    """Create a new dataset in CKAN."""
+    ckan_conn = get_ckan_connection()
+    meta = user_input_meta(ckan_conn)
+    create_dataset(ckan_conn, meta)
