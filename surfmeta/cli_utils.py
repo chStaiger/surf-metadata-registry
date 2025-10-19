@@ -45,8 +45,7 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
             if 1 <= choice <= len(orgs):
                 chosen_org = orgs[choice - 1]
                 break
-            else:
-                print(f"❌ Invalid choice. Please choose 1–{len(orgs)}.")
+            print(f"❌ Invalid choice. Please choose 1–{len(orgs)}.")
         except ValueError:
             print("❌ Please enter a valid number.")
 
@@ -66,8 +65,7 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
                     if 1 <= choice <= len(groups):
                         chosen_groups.append(groups[choice - 1])
                         break
-                    else:
-                        print(f"❌ Invalid choice. Please choose 1–{len(groups)}.")
+                    print(f"❌ Invalid choice. Please choose 1–{len(groups)}.")
                 except ValueError:
                     print("❌ Please enter a valid number.")
 
@@ -101,5 +99,5 @@ def create_dataset(ckan_conn: Ckan, meta: dict):
         print(f"🌐 Name: {response['name']}")
     except ValidationError as e:
         print("❌ Failed to create dataset. Validation error:", e)
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         print("❌ Failed to create dataset:", e)

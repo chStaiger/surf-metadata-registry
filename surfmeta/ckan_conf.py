@@ -31,7 +31,7 @@ class CKANConf:
                 ckan_conf = json.load(f)
                 self.ckans = ckan_conf["ckans"]
                 self.cur_ckan = ckan_conf.get("cur_ckan", DEMO_CKAN)
-        except Exception as exc:
+        except Exception as exc: # pylint: disable=broad-exception-caught
             warnings.warn(f"{self.config_path} not found or invalid. Resetting. Reason: {exc}")
             self.reset()
 
@@ -108,12 +108,12 @@ class CKANConf:
         url_or_alias = DEMO_CKAN if url_or_alias is None else str(url_or_alias)
         try:
             url, _ = self.get_entry(url_or_alias)
-        except KeyError:
+        except KeyError as exc:
             url = url_or_alias
             if not self.is_valid_url(url):
                 if self.parser:
-                    raise self.parser.error(f"Invalid CKAN URL: {url}")
-                raise ValueError(f"Invalid CKAN URL: {url}")
+                    raise self.parser.error(f"Invalid CKAN URL: {url}") from exc
+                raise ValueError(f"Invalid CKAN URL: {url}") from exc
             self.ckans[url] = {}
         if self.cur_ckan != url:
             self.cur_ckan = url

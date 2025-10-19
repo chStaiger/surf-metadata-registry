@@ -102,8 +102,8 @@ class Ckan:
             return self.api.action.package_show(id=dataset_id)
         except NotFound as e:
             raise e
-        except Exception as e:
-            raise HTTPError(f"Error retrieving dataset info: {e}")
+        except Exception as e: # pylint: disable=broad-exception-caught
+            raise HTTPError(f"Error retrieving dataset info: {e}") from e
 
     def create_dataset(self, metadata: dict, verbose: bool = False) -> dict:
         """Create a new dataset in CKAN.
@@ -138,8 +138,8 @@ class Ckan:
             return response
         except ValidationError as e:
             raise e
-        except Exception as e:
-            raise HTTPError(f"Error creating dataset: {e}")
+        except Exception as e: # pylint: disable=broad-exception-caught
+            raise HTTPError(f"Error creating dataset: {e}") from e
 
     def list_all_datasets(self, include_private: bool = False) -> list:
         """List all datasets available in the CKAN instance.
@@ -180,8 +180,8 @@ class Ckan:
 
             return datasets
 
-        except Exception as e:
-            raise HTTPError(f"Error listing datasets: {e}")
+        except Exception as e: # pylint: disable=broad-exception-caught
+            raise HTTPError(f"Error listing datasets: {e}") from e
 
     def add_meta_to_dataset(self, dataset_id: str, metadata: dict, verbose: bool = False) -> dict:
         """Add or update metadata fields for an existing dataset.
@@ -234,8 +234,8 @@ class Ckan:
             raise e
         except NotFound as e:
             raise e
-        except Exception as e:
-            raise HTTPError(f"Error updating metadata: {e}")
+        except Exception as e: # pylint: disable=broad-exception-caught
+            raise HTTPError(f"Error updating metadata: {e}") from e
 
     def add_datafile_to_dataset(self, dataset_id: str, file_path: Path, verbose: bool = True) -> dict:
         """Upload a file to a specific dataset as a resource.
@@ -271,8 +271,8 @@ class Ckan:
             if verbose:
                 print(f"File '{file_path.name}' uploaded to dataset '{dataset_id}'.")
             return response
-        except Exception as e:
-            raise HTTPError(f"Error uploading file: {e}")
+        except Exception as e: # pylint: disable=broad-exception-caught
+            raise HTTPError(f"Error uploading file: {e}") from e
 
     def get_checksum_by_filename(self, dataset_id: str, target_label: str) -> Optional[str]:
         """Retrieve the checksum of a specific file by its name.
@@ -342,12 +342,12 @@ class Ckan:
                     try:
                         org_info = self.api.action.organization_show(id=org_name)
                         orgs_full.append(org_info)
-                    except Exception as e:
+                    except Exception as e: # pylint: disable=broad-exception-caught
                         print(f"⚠️ Could not retrieve info for org '{org_name}': {e}")
                 return orgs_full
             return orgs
-        except Exception as e:
-            raise HTTPError(f"Error listing organizations: {e}")
+        except Exception as e: # pylint: disable=broad-exception-caught
+            raise HTTPError(f"Error listing organizations: {e}") from e
 
     def list_groups(self, include_extras: bool = False) -> list:
         """List all groups available in the CKAN instance.
@@ -377,9 +377,9 @@ class Ckan:
                     try:
                         group_info = self.api.action.group_show(id=group_name)
                         groups_full.append(group_info)
-                    except Exception as e:
+                    except Exception as e: # pylint: disable=broad-exception-caught
                         print(f"⚠️ Could not retrieve info for group '{group_name}': {e}")
                 return groups_full
             return groups
         except Exception as e:
-            raise HTTPError(f"Error listing groups: {e}")
+            raise HTTPError(f"Error listing groups: {e}") from e

@@ -114,7 +114,7 @@ def main():
 
 
 # CKAN CONFIG FUNCTIONS
-def ckan_list(args):
+def ckan_list(args): # pylint: disable=unused-argument
     """List all available ckan configurations."""
     show_available(CKANCONFIG)
 
@@ -167,7 +167,7 @@ def ckan_list_orgs(args):
         else:
             for name in orgs:
                 print(f"- {name}")
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         print(f"❌ Error listing organizations: {e}")
 
 
@@ -186,11 +186,11 @@ def ckan_list_groups(args):
         else:
             for name in groups:
                 print(f"- {name}")
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         print(f"❌ Error listing groups: {e}")
 
 
-def cmd_create(args):
+def cmd_create(args): # pylint: disable=unused-argument
     """Create a new dataset in CKAN."""
     ckan_conn = get_ckan_connection()
     meta = user_input_meta(ckan_conn)
