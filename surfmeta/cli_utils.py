@@ -1,5 +1,6 @@
 """Useful functions for cli."""
 
+import json
 import sys
 import uuid
 
@@ -88,8 +89,17 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
     return metadata
 
 
-def create_dataset(ckan_conn: Ckan, meta: dict):
+def create_dataset(ckan_conn: Ckan, meta: dict, sys_meta: dict | None = None):
     """Create the dataset."""
+    if sys_meta:
+        extras = meta.get("extras", [])
+        for key, value in sys_meta.items():
+            # CKAN extras must be string key/value pairs
+            if not isinstance(value, str):
+                value = json.dumps(value)
+            extras.append({"key": key, "value": value})
+        meta["extras"] = extras
+
     # Try creating the dataset
     try:
         response = ckan_conn.create_dataset(meta)
@@ -99,5 +109,5 @@ def create_dataset(ckan_conn: Ckan, meta: dict):
         print(f"🌐 Name: {response['name']}")
     except ValidationError as e:
         print("❌ Failed to create dataset. Validation error:", e)
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print("❌ Failed to create dataset:", e)

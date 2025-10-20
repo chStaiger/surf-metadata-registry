@@ -3,12 +3,14 @@
 import argparse
 import sys
 from getpass import getpass
+from pathlib import Path
 
 from ckanapi import NotAuthorized
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
 from surfmeta.cli_utils import create_dataset, get_ckan_connection, user_input_meta
+from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta
 
 MAIN_HELP_MESSAGE = """
 Create metadata for data on SURF infrastructure.
@@ -22,13 +24,13 @@ Available subcommands:
 Example usage:
     surfmeta ckan list
     surfmeta ckan switch myalias
-    surfmeta ckan init mytoken
-    surfmeta ckan remove demo
+    surfmeta ckan init
+    surfmeta ckan remove ckanurl
     surfmeta ckan alias myalias https://demo.ckan.org
     surfmeta ckan orgs
     surfmeta ckan groups
 
-    surfmeta create
+    surfmeta create path
 """
 
 CKANCONFIG = CKANConf()
@@ -94,6 +96,7 @@ def build_parser():
 
     # `surfmeta create`
     parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
+    parser_create.add_argument("path", type=Path, help="Path for which to create metadata.")
     parser_create.set_defaults(func=cmd_create)
 
     return parser
@@ -114,7 +117,7 @@ def main():
 
 
 # CKAN CONFIG FUNCTIONS
-def ckan_list(args): # pylint: disable=unused-argument
+def ckan_list(args):  # pylint: disable=unused-argument
     """List all available ckan configurations."""
     show_available(CKANCONFIG)
 
@@ -167,7 +170,7 @@ def ckan_list_orgs(args):
         else:
             for name in orgs:
                 print(f"- {name}")
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"❌ Error listing organizations: {e}")
 
 
@@ -186,12 +189,21 @@ def ckan_list_groups(args):
         else:
             for name in groups:
                 print(f"- {name}")
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"❌ Error listing groups: {e}")
 
 
-def cmd_create(args): # pylint: disable=unused-argument
+def cmd_create(args):  # pylint: disable=unused-argument
     """Create a new dataset in CKAN."""
     ckan_conn = get_ckan_connection()
     meta = user_input_meta(ckan_conn)
-    create_dataset(ckan_conn, meta)
+    system = [name for name in SYSTEMS if name in get_system_info()]
+    sys_meta = {}
+    if len(system) == 0:
+        sys_meta = local_meta()
+    elif system[0] == "snellius":
+        sys_meta = snellius_meta()
+    if args.path.is_file():
+        meta_checksum(sys_meta, args.path)
+
+    create_dataset(ckan_conn, meta, sys_meta)
