@@ -99,5 +99,5 @@ def create_dataset(ckan_conn: Ckan, meta: dict):
         print(f"🌐 Name: {response['name']}")
     except ValidationError as e:
         print("❌ Failed to create dataset. Validation error:", e)
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print("❌ Failed to create dataset:", e)

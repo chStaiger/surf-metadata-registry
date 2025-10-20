@@ -31,7 +31,7 @@ class CKANConf:
                 ckan_conf = json.load(f)
                 self.ckans = ckan_conf["ckans"]
                 self.cur_ckan = ckan_conf.get("cur_ckan", DEMO_CKAN)
-        except Exception as exc: # pylint: disable=broad-exception-caught
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             warnings.warn(f"{self.config_path} not found or invalid. Resetting. Reason: {exc}")
             self.reset()
 
