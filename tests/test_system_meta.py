@@ -16,11 +16,8 @@ def test_get_system_info(monkeypatch):
 
 def test_local_meta_and_snellius_meta():
     """Test that local_meta and snellius_meta return dicts with expected content."""
-    # ⚠️ These functions currently don't return anything!
-    # To make them testable, they should return `meta`.
-    # For now, we can just check that they don't raise.
-    assert sm.local_meta() is None
-    assert sm.snellius_meta() is None
+    assert {'server': 'local'} == sm.local_meta()
+    assert {'system_name': 'snellius', 'server': 'snellius.surf.nl', 'protocols': ['ssh', 'rsync']} == sm.snellius_meta()
 
 
 def test_calculate_local_checksum(tmp_path: Path):
