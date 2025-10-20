@@ -1,6 +1,7 @@
 """Useful functions for cli."""
 
 import sys
+import json
 import uuid
 
 from ckanapi import ValidationError
@@ -88,8 +89,17 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
     return metadata
 
 
-def create_dataset(ckan_conn: Ckan, meta: dict):
+def create_dataset(ckan_conn: Ckan, meta: dict, sys_meta: dict | None = None):
     """Create the dataset."""
+    if sys_meta:
+        extras = meta.get("extras", [])
+        for key, value in sys_meta.items():
+            # CKAN extras must be string key/value pairs
+            if not isinstance(value, str):
+                value = json.dumps(value)
+            extras.append({"key": key, "value": value})
+        meta["extras"] = extras
+
     # Try creating the dataset
     try:
         response = ckan_conn.create_dataset(meta)
