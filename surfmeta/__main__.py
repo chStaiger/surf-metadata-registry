@@ -198,6 +198,7 @@ def cmd_create(args):  # pylint: disable=unused-argument
     ckan_conn = get_ckan_connection()
     meta = user_input_meta(ckan_conn)
     system = [name for name in SYSTEMS if name in get_system_info()]
+    sys_meta = {}
     if len(system) == 0:
         sys_meta = local_meta()
     elif system[0] == "snellius":
