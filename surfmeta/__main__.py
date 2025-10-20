@@ -10,9 +10,7 @@ from ckanapi import NotAuthorized
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
 from surfmeta.cli_utils import create_dataset, get_ckan_connection, user_input_meta
-from surfmeta.sys_utils import get_system_info, local_meta, snellius_meta,  meta_checksum
-
-from surfmeta.sys_utils import SYSTEMS
+from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta
 
 MAIN_HELP_MESSAGE = """
 Create metadata for data on SURF infrastructure.
@@ -98,9 +96,7 @@ def build_parser():
 
     # `surfmeta create`
     parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
-    parser_create.add_argument("path",
-                               type=Path,
-                               help="Path for which to create metadata.")
+    parser_create.add_argument("path", type=Path, help="Path for which to create metadata.")
     parser_create.set_defaults(func=cmd_create)
 
     return parser

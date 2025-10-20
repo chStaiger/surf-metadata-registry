@@ -8,6 +8,7 @@ from pathlib import Path
 
 SYSTEMS = ["snellius"]
 
+
 def get_system_info():
     """Retrieve info from system where client is run."""
     platform_info = platform.node()
@@ -28,6 +29,7 @@ def snellius_meta():
     meta["server"] = "snellius.surf.nl"
     meta["protocols"] = ["ssh", "rsync"]
     return meta
+
 
 def meta_checksum(
     meta: dict,
@@ -57,8 +59,7 @@ def meta_checksum(
     if not remote:
         # ✅ Local calculation
         if file_path.is_file():
-            meta["checksum"] = (algorithm,
-                                calculate_local_checksum(file_path, algorithm))
+            meta["checksum"] = (algorithm, calculate_local_checksum(file_path, algorithm))
             meta["location"] = str(file_path)
             return meta
         warnings.warn(f"{str(file_path)} not a file. Cannot create checksum.")

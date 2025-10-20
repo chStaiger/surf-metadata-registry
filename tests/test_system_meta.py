@@ -1,12 +1,12 @@
 import platform
-import subprocess
 import warnings
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 import surfmeta.sys_utils as sm
+
 
 def test_get_system_info(monkeypatch):
     """Ensure get_system_info returns the platform node name."""
@@ -16,7 +16,6 @@ def test_get_system_info(monkeypatch):
 
 def test_local_meta_and_snellius_meta():
     """Test that local_meta and snellius_meta return dicts with expected content."""
-
     # ⚠️ These functions currently don't return anything!
     # To make them testable, they should return `meta`.
     # For now, we can just check that they don't raise.
@@ -105,4 +104,3 @@ def test_meta_checksum_local_missing_file(tmp_path: Path):
         assert len(w) == 1
         assert "not a file" in str(w[0].message)
         assert result == {}
-

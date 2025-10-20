@@ -1,7 +1,7 @@
 """Useful functions for cli."""
 
-import sys
 import json
+import sys
 import uuid
 
 from ckanapi import ValidationError
