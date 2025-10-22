@@ -26,7 +26,7 @@ def get_ckan_connection():
 def user_input_meta(ckan_conn: "Ckan") -> dict:
     """Retrieve metadata input through CLI with organisation and optional group selection."""
     # Required metadata fields
-    dataset_name = input("Dataset name (machine-readable): ").strip()
+    dataset_name = input("Dataset name: ").strip()
     author = input("Author name: ").strip()
 
     # --- Organisation selection ---
@@ -75,8 +75,8 @@ def user_input_meta(ckan_conn: "Ckan") -> dict:
 
     # --- Build metadata dictionary ---
     metadata = {
-        "name": dataset_name,
-        "title": f"Dataset {dataset_name}",
+        "name": dataset_uuid,
+        "title": dataset_name,
         "author": author,
         "owner_org": chosen_org,
         "extras": [{"key": "uuid", "value": dataset_uuid}],
@@ -106,7 +106,7 @@ def create_dataset(ckan_conn: Ckan, meta: dict, sys_meta: dict | None = None):
         uuid_value = next((item["value"] for item in meta["extras"] if item["key"] == "uuid"), None)
         print("✅ Dataset created successfully!")
         print(f"🆔 UUID: {uuid_value}")
-        print(f"🌐 Name: {response['name']}")
+        print(f"🌐 Name: {response['title']}")
     except ValidationError as e:
         print("❌ Failed to create dataset. Validation error:", e)
     except Exception as e:  # pylint: disable=broad-exception-caught
