@@ -3,6 +3,8 @@
 import json
 import sys
 import uuid
+from pathlib import Path
+from typing import Any, Dict, List
 
 from ckanapi import ValidationError
 
@@ -111,3 +113,98 @@ def create_dataset(ckan_conn: Ckan, meta: dict, sys_meta: dict | None = None):
         print("❌ Failed to create dataset. Validation error:", e)
     except Exception as e:  # pylint: disable=broad-exception-caught
         print("❌ Failed to create dataset:", e)
+
+
+def load_and_validate_flat_json(json_path: Path) -> List[Dict[str, str]]:
+    """Load a JSON file, ensure it contains only flat key-value pairs.
+
+    This function only allows primitive values (str, int, float, bool, None)
+    or lists of primitives. It converts the JSON into a list of CKAN-style
+    extras dictionaries: [{'key': ..., 'value': ...}, ...].
+
+    Args:
+        json_path (Path): Path to the JSON metafile.
+
+    Returns:
+        List[Dict[str, str]]: List of CKAN key/value entries.
+
+    Raises:
+        ValueError: If the JSON is invalid or contains nested structures.
+        json.JSONDecodeError: If the file is not valid JSON.
+        OSError: If the file cannot be read.
+
+    """
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Ensure root is a dict
+    if not isinstance(data, dict):
+        raise ValueError(f"Metafile '{json_path}' must contain a JSON object (key-value pairs).")
+
+    def is_simple_value(v: Any) -> bool:
+        """Check if value is a simple type or list of simple types."""
+        if isinstance(v, (str, int, float, bool)) or v is None:
+            return True
+        if isinstance(v, list):
+            return all(isinstance(i, (str, int, float, bool)) or i is None for i in v)
+        return False
+
+    # Validate and build CKAN-style pairs
+    extras = []
+    for key, value in data.items():
+        if not is_simple_value(value):
+            raise ValueError(
+                f"Metafile '{json_path}' contains unsupported nested structures for key: '{key}'. "
+                "Only primitive types or lists of primitives are allowed."
+            )
+
+        # Convert lists to JSON string; primitives to str
+        if isinstance(value, list):
+            value_str = json.dumps(value)  # e.g. ["md5", "15f8..."]
+        else:
+            value_str = str(value) if value is not None else ""
+
+        extras.append({"key": key, "value": value_str})
+
+    return extras
+
+
+def merge_ckan_metadata(meta: dict, sys_meta: dict, extras: list[dict]) -> dict:
+    """Merge main metadata, system metadata, and user extras into a CKAN-ready metadata dict.
+
+    Parameters
+    ----------
+    meta : dict
+        Main dataset metadata, may include 'extras'.
+    sys_meta : dict
+        System metadata; values can be str, numbers, tuples, or lists.
+    extras : list of dict
+        User-provided extras already in CKAN style [{'key': ..., 'value': ...}].
+
+    Returns
+    -------
+    dict
+        CKAN-ready metadata dictionary with merged 'extras'.
+
+    """
+    # Start with a copy of meta to avoid mutating the original
+    metadata = dict(meta)
+
+    # Initialize extras list
+    merged_extras = list(metadata.get("extras", []))  # existing extras in meta
+
+    # Convert sys_meta items into CKAN extras format
+    for key, value in sys_meta.items():
+        if isinstance(value, (tuple, list)):
+            value_str = json.dumps(value)
+        else:
+            value_str = str(value)
+        merged_extras.append({"key": key, "value": value_str})
+
+    # Add user-provided extras
+    merged_extras.extend(extras)
+
+    # Set merged extras back
+    metadata["extras"] = merged_extras
+
+    return metadata

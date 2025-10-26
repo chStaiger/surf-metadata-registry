@@ -1,6 +1,7 @@
 """Commandline tool to register metadata for data on SURF infrastructure."""
 
 import argparse
+import json
 import sys
 from getpass import getpass
 from pathlib import Path
@@ -9,7 +10,12 @@ from ckanapi import NotAuthorized
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
-from surfmeta.cli_utils import create_dataset, get_ckan_connection, user_input_meta
+from surfmeta.cli_utils import (
+    get_ckan_connection,
+    load_and_validate_flat_json,
+    merge_ckan_metadata,
+    user_input_meta,
+)
 from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta
 
 MAIN_HELP_MESSAGE = """
@@ -88,16 +94,26 @@ def build_parser():
     parser_ckan_groups.add_argument("--full", action="store_true", help="Include full group metadata")
     parser_ckan_groups.set_defaults(func=ckan_list_groups)
 
-    # `surfmeta ckan groups
-
-    # ───────────────────────────────
     # surfmeta create
-    # ───────────────────────────────
-
-    # `surfmeta create`
     parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
     parser_create.add_argument("path", type=Path, help="Path for which to create metadata.")
+    parser_create.add_argument(
+        "--metafile", type=Path, help="Path to a JSON file containing additional metadata."
+    )
     parser_create.set_defaults(func=cmd_create)
+
+    # surfmeta create-meta-file
+
+    parser_create_meta_file = subparsers.add_parser(
+        "create-meta-file",
+        help="Interactively create a JSON metadata file"
+    )
+    parser_create_meta_file.add_argument(
+        "output",
+        type=Path,
+        help="Path to store the metadata JSON file"
+    )
+    parser_create_meta_file.set_defaults(func=cmd_create_meta_file)
 
     return parser
 
@@ -193,17 +209,92 @@ def ckan_list_groups(args):
         print(f"❌ Error listing groups: {e}")
 
 
-def cmd_create(args):  # pylint: disable=unused-argument
+def cmd_create(args):
     """Create a new dataset in CKAN."""
     ckan_conn = get_ckan_connection()
     meta = user_input_meta(ckan_conn)
+
+    # Determine system metadata
     system = [name for name in SYSTEMS if name in get_system_info()]
-    sys_meta = {}
     if len(system) == 0:
         sys_meta = local_meta()
     elif system[0] == "snellius":
         sys_meta = snellius_meta()
+    else:
+        sys_meta = {}
+
+    # Optional: verify checksum if file exists
     if args.path.is_file():
         meta_checksum(sys_meta, args.path.absolute())
 
-    create_dataset(ckan_conn, meta, sys_meta)
+    # Load CKAN-style extras from metafile
+    extras = []
+    if args.metafile:
+        try:
+            extras = load_and_validate_flat_json(args.metafile)
+        except Exception as e: # pylint: disable=broad-exception-caught
+            print(f"❌ Error reading metafile: {e}")
+            return
+
+    print(meta)
+    print(sys_meta)
+    print(extras)
+
+    ckan_metadata = merge_ckan_metadata(meta, sys_meta, extras)
+    try:
+        ckan_conn.create_dataset(ckan_metadata, verbose=True)
+        print("✅ Dataset created successfully!")
+    except Exception as e: # pylint: disable=broad-exception-caught
+        print(f"❌ Failed to create dataset: {e}")
+
+
+def cmd_create_meta_file(args):
+    """Create a JSON metadata file interactively.
+
+    Steps:
+    1. Ask for Prov-O metadata.
+    2. Ask for user-defined metadata (key-value pairs).
+    3. Save to the specified file.
+    """
+    json_path = Path(args.output).absolute()
+    print(json_path)
+
+    # Step 1: Collect Prov-O metadata
+    print("Add Prov-O metadata (leave blank to skip any field):")
+    prov_fields = [
+        "prov:wasGeneratedBy",
+        "prov:wasDerivedFrom",
+        "prov:startedAtTime",
+        "prov:endedAtTime",
+        "prov:actedOnBehalfOf",
+        "prov:SoftwareAgent",
+    ]
+    prov_metadata = {}
+    for field in prov_fields:
+        value = input(f"{field}: ").strip()
+        if value:
+            prov_metadata[field] = value
+
+    # Step 2: Collect user-defined metadata
+    print("\nAdd your own metadata (key-value pairs). Type 'done' as key to finish.")
+    user_metadata = {}
+    while True:
+        key = input("Key: ").strip()
+        if key.lower() == "done":
+            break
+        if not key:
+            print("Key cannot be empty.")
+            continue
+        value = input("Value: ").strip()
+        user_metadata[key] = value
+
+    # Combine metadata
+    all_metadata = {**prov_metadata, **user_metadata}
+
+    # Step 3: Save to JSON file
+    try:
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(all_metadata, f, indent=4)
+        print(f"\nMetadata saved to: {json_path}")
+    except Exception as e: # pylint: disable=broad-exception-caught
+        print(f"Error saving metadata file: {e}")
