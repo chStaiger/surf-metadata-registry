@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import json
 from getpass import getpass
 from pathlib import Path
 
@@ -93,19 +94,26 @@ def build_parser():
     parser_ckan_groups.add_argument("--full", action="store_true", help="Include full group metadata")
     parser_ckan_groups.set_defaults(func=ckan_list_groups)
 
-    # `surfmeta ckan groups
-
-    # ───────────────────────────────
     # surfmeta create
-    # ───────────────────────────────
-
-    # `surfmeta create`
     parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
     parser_create.add_argument("path", type=Path, help="Path for which to create metadata.")
     parser_create.add_argument(
         "--metafile", type=Path, help="Path to a JSON file containing additional metadata."
     )
     parser_create.set_defaults(func=cmd_create)
+
+    # surfmeta create-meta-file
+
+    parser_create_meta_file = subparsers.add_parser(
+        "create-meta-file",
+        help="Interactively create a JSON metadata file"
+    )
+    parser_create_meta_file.add_argument(
+        "output",
+        type=Path,
+        help="Path to store the metadata JSON file"
+    )
+    parser_create_meta_file.set_defaults(func=cmd_create_meta_file)
 
     return parser
 
@@ -238,3 +246,56 @@ def cmd_create(args):
         print("✅ Dataset created successfully!")
     except Exception as e: # pylint: disable=broad-exception-caught
         print(f"❌ Failed to create dataset: {e}")
+
+
+def cmd_create_meta_file(args):
+    """
+    Create a JSON metadata file interactively.
+
+    Steps:
+    1. Ask for Prov-O metadata.
+    2. Ask for user-defined metadata (key-value pairs).
+    3. Save to the specified file.
+    """
+    json_path = Path(args.output).absolute()
+    print(json_path)
+
+    # Step 1: Collect Prov-O metadata
+    print("Add Prov-O metadata (leave blank to skip any field):")
+    prov_fields = [
+        "prov:wasGeneratedBy",
+        "prov:wasDerivedFrom",
+        "prov:startedAtTime",
+        "prov:endedAtTime",
+        "prov:actedOnBehalfOf",
+        "prov:SoftwareAgent",
+    ]
+    prov_metadata = {}
+    for field in prov_fields:
+        value = input(f"{field}: ").strip()
+        if value:
+            prov_metadata[field] = value
+
+    # Step 2: Collect user-defined metadata
+    print("\nAdd your own metadata (key-value pairs). Type 'done' as key to finish.")
+    user_metadata = {}
+    while True:
+        key = input("Key: ").strip()
+        if key.lower() == "done":
+            break
+        if not key:
+            print("Key cannot be empty.")
+            continue
+        value = input("Value: ").strip()
+        user_metadata[key] = value
+
+    # Combine metadata
+    all_metadata = {**prov_metadata, **user_metadata}
+
+    # Step 3: Save to JSON file
+    try:
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(all_metadata, f, indent=4)
+        print(f"\nMetadata saved to: {json_path}")
+    except Exception as e:
+        print(f"Error saving metadata file: {e}")
