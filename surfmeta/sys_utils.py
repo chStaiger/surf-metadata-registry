@@ -71,7 +71,7 @@ def meta_checksum(
     checksum = calculate_remote_checksum(host, username, file_path, algorithm)
     meta["checksum"] = (algorithm, checksum)
     # Store remote file location in a clean format
-    meta["location"] = f"{host}:{file_path}"
+    meta["location"] = f"{host}:{file_path.absolute()}"
     return meta
 
 
