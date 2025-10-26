@@ -23,7 +23,7 @@ def get_ckan_connection():
     return Ckan(url, entry["token"])
 
 
-def user_input_meta(ckan_conn: "Ckan") -> dict:
+def user_input_meta(ckan_conn: Ckan) -> dict:
     """Retrieve metadata input through CLI with organisation and optional group selection."""
     # Required metadata fields
     dataset_name = input("Dataset name: ").strip()
