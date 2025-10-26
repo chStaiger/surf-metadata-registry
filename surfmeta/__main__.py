@@ -1,8 +1,8 @@
 """Commandline tool to register metadata for data on SURF infrastructure."""
 
 import argparse
-import sys
 import json
+import sys
 from getpass import getpass
 from pathlib import Path
 
@@ -249,8 +249,7 @@ def cmd_create(args):
 
 
 def cmd_create_meta_file(args):
-    """
-    Create a JSON metadata file interactively.
+    """Create a JSON metadata file interactively.
 
     Steps:
     1. Ask for Prov-O metadata.
@@ -297,5 +296,5 @@ def cmd_create_meta_file(args):
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(all_metadata, f, indent=4)
         print(f"\nMetadata saved to: {json_path}")
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         print(f"Error saving metadata file: {e}")
