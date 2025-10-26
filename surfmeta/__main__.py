@@ -204,6 +204,6 @@ def cmd_create(args):  # pylint: disable=unused-argument
     elif system[0] == "snellius":
         sys_meta = snellius_meta()
     if args.path.is_file():
-        meta_checksum(sys_meta, args.path)
+        meta_checksum(sys_meta, args.path.absolute())
 
     create_dataset(ckan_conn, meta, sys_meta)
