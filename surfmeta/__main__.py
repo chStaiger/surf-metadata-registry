@@ -9,7 +9,12 @@ from ckanapi import NotAuthorized
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
-from surfmeta.cli_utils import create_dataset, get_ckan_connection, user_input_meta
+from surfmeta.cli_utils import (
+    get_ckan_connection,
+    load_and_validate_flat_json,
+    merge_ckan_metadata,
+    user_input_meta,
+)
 from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta
 
 MAIN_HELP_MESSAGE = """
@@ -97,6 +102,9 @@ def build_parser():
     # `surfmeta create`
     parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
     parser_create.add_argument("path", type=Path, help="Path for which to create metadata.")
+    parser_create.add_argument(
+        "--metafile", type=Path, help="Path to a JSON file containing additional metadata."
+    )
     parser_create.set_defaults(func=cmd_create)
 
     return parser
@@ -193,17 +201,40 @@ def ckan_list_groups(args):
         print(f"❌ Error listing groups: {e}")
 
 
-def cmd_create(args):  # pylint: disable=unused-argument
+def cmd_create(args):
     """Create a new dataset in CKAN."""
     ckan_conn = get_ckan_connection()
     meta = user_input_meta(ckan_conn)
+
+    # Determine system metadata
     system = [name for name in SYSTEMS if name in get_system_info()]
-    sys_meta = {}
     if len(system) == 0:
         sys_meta = local_meta()
     elif system[0] == "snellius":
         sys_meta = snellius_meta()
+    else:
+        sys_meta = {}
+
+    # Optional: verify checksum if file exists
     if args.path.is_file():
         meta_checksum(sys_meta, args.path.absolute())
 
-    create_dataset(ckan_conn, meta, sys_meta)
+    # Load CKAN-style extras from metafile
+    extras = []
+    if args.metafile:
+        try:
+            extras = load_and_validate_flat_json(args.metafile)
+        except Exception as e: # pylint: disable=broad-exception-caught
+            print(f"❌ Error reading metafile: {e}")
+            return
+
+    print(meta)
+    print(sys_meta)
+    print(extras)
+
+    ckan_metadata = merge_ckan_metadata(meta, sys_meta, extras)
+    try:
+        ckan_conn.create_dataset(ckan_metadata, verbose=True)
+        print("✅ Dataset created successfully!")
+    except Exception as e: # pylint: disable=broad-exception-caught
+        print(f"❌ Failed to create dataset: {e}")

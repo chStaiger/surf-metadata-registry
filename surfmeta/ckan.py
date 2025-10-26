@@ -128,6 +128,7 @@ class Ckan:
             For other HTTP errors.
 
         """
+        print(metadata)
         if not metadata or "name" not in metadata:
             raise ValueError("Metadata must include at least a dataset 'name'.")
 
