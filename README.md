@@ -74,3 +74,32 @@ Example usage:
 ```
 
 # Additional configuration
+
+# Known Issues
+
+## The spider platform
+The spider platform does not provide version 3.13 or higher for python.
+You can still use the software and run it in a virtual environment. We will use `uv` in the eample below:
+
+1. Clone the code repository
+
+```
+git clone https://github.com/chStaiger/surf-metadata-registry.git
+cd surf-metadata-registry/
+```
+
+2. Create a python3.13 environment
+
+```
+uv venv --python 3.13
+source .venv/bin/activate
+```
+
+3. Build the software package and run it
+
+```
+uv build
+uv run surfmeta
+```
+
+All `surfmeta` commands need to be run through `uv run`.

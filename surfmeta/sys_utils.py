@@ -6,7 +6,7 @@ import subprocess
 import warnings
 from pathlib import Path
 
-SYSTEMS = ["snellius"]
+SYSTEMS = ["snellius", "spider"]
 
 
 def get_system_info():
@@ -30,6 +30,13 @@ def snellius_meta():
     meta["protocols"] = ["ssh", "rsync"]
     return meta
 
+def spider_meta():
+    """Create standard spider metadata."""
+    meta = {}
+    meta["system_name"] = "spider"
+    meta["server"] = "spider.surfsara.nl"
+    meta["protocols"] = ["ssh", "rsync"]
+    return meta
 
 def meta_checksum(
     meta: dict,
