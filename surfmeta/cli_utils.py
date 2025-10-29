@@ -218,21 +218,23 @@ def handle_md_list(ckan_conn, args):
 
 
 def _list_all_datasets(ckan_conn):
-    """List all datasets including private ones."""
+    """List all datasets in a table-like format (without org/groups)."""
     datasets = ckan_conn.list_all_datasets(include_private=True)
     if not datasets:
         print("⚠️ No datasets found on this CKAN instance.")
         return
 
     print(f"Found {len(datasets)} datasets (including private):\n")
+
+    # Determine max lengths for formatting
+    max_title_len = max(len(ds.get("title", "<no title>")) for ds in datasets)
+    max_uuid_len = max(len(ds.get("name", "<no uuid>")) for ds in datasets)
+
+    # Print each dataset nicely
     for ds in datasets:
         title = ds.get("title", "<no title>")
-        name = ds.get("name", "<no uuid>")
-        org = ds.get("organization", {}).get("name", "<no organization>")
-        groups = [g.get("name", "") for g in ds.get("groups", [])]
-        group_str = ", ".join(groups) if groups else "<no groups>"
-        print(f"- {title} ({name}) | Org: {org} | Groups: {group_str}")
-
+        uuid = ds.get("name", "<no uuid>")
+        print(f"- {title:<{max_title_len}} ({uuid})")
 
 def _show_dataset_metadata(ckan_conn, args):
     """Show metadata for a specific dataset."""
