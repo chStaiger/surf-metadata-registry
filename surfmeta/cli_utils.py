@@ -208,3 +208,88 @@ def merge_ckan_metadata(meta: dict, sys_meta: dict, extras: list[dict]) -> dict:
     metadata["extras"] = merged_extras
 
     return metadata
+
+def handle_md_list(ckan_conn, args):
+    """Core logic for listing metadata entries from CKAN."""
+    if not args.uuid:
+        _list_all_datasets(ckan_conn)
+    else:
+        _show_dataset_metadata(ckan_conn, args)
+
+
+def _list_all_datasets(ckan_conn):
+    """List all datasets including private ones."""
+    datasets = ckan_conn.list_all_datasets(include_private=True)
+    if not datasets:
+        print("⚠️ No datasets found on this CKAN instance.")
+        return
+
+    print(f"Found {len(datasets)} datasets (including private):\n")
+    for ds in datasets:
+        title = ds.get("title", "<no title>")
+        name = ds.get("name", "<no uuid>")
+        org = ds.get("organization", {}).get("name", "<no organization>")
+        groups = [g.get("name", "") for g in ds.get("groups", [])]
+        group_str = ", ".join(groups) if groups else "<no groups>"
+        print(f"- {title} ({name}) | Org: {org} | Groups: {group_str}")
+
+
+def _show_dataset_metadata(ckan_conn, args):
+    """Show metadata for a specific dataset."""
+    sys_keys = {"system_name", "server", "protocols", "uuid"}
+    dataset = ckan_conn.get_dataset_info(args.uuid)
+
+    extras = dataset.get("extras", [])
+    meta_dict = {e["key"]: e["value"] for e in extras if "key" in e and "value" in e}
+
+    # Separate system vs user metadata
+    system_meta = {k: v for k, v in meta_dict.items() if k in sys_keys}
+    user_meta = {k: v for k, v in meta_dict.items() if k not in sys_keys}
+
+    # Apply filtering if flags are set
+    filtered_meta = _apply_flags(args, system_meta, user_meta, meta_dict)
+
+    if not filtered_meta:
+        print(f"⚠️ No matching metadata found for dataset {args.uuid}.")
+        return
+
+    _print_dataset_info(dataset, system_meta, user_meta, args)
+
+
+def _apply_flags(args, system_meta, user_meta, meta_dict):
+    if args.sys:
+        return system_meta
+    if args.user:
+        return user_meta
+    return meta_dict
+
+
+def _print_dataset_info(dataset, system_meta, user_meta, args):
+    title = dataset.get("title", "<no title>")
+    name = dataset.get("name", "<no uuid>")
+    org = dataset.get("organization", {}).get("name", "<no organization>")
+    groups = [g.get("name", "") for g in dataset.get("groups", [])]
+    group_str = ", ".join(groups) if groups else "<no groups>"
+
+    print(f"\nMetadata for dataset: {title} (UUID: {name})\n")
+
+    if not args.sys and not args.user:
+        print(f"Organization: {org}")
+        print(f"Groups      : {group_str}\n")
+
+    if system_meta and not args.user:
+        print("System Metadata:")
+        for k, v in system_meta.items():
+            if isinstance(v, list):
+                v = ", ".join(v)
+            print(f"  {k:<14}: {v}")
+        print()
+
+    if user_meta and not args.sys:
+        print("User Metadata:")
+        for k, v in user_meta.items():
+            if isinstance(v, list):
+                v = ", ".join(v)
+            print(f"  {k:<14}: {v}")
+        print()
+

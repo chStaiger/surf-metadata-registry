@@ -12,6 +12,7 @@ from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
 from surfmeta.cli_utils import (
     get_ckan_connection,
+    handle_md_list,
     load_and_validate_flat_json,
     merge_ckan_metadata,
     user_input_meta,
@@ -114,6 +115,34 @@ def build_parser():
         help="Path to store the metadata JSON file"
     )
     parser_create_meta_file.set_defaults(func=cmd_create_meta_file)
+
+    # surfmeta md-list
+    parser_md_list = subparsers.add_parser(
+        "md-list",
+        help="List metadata entries from CKAN. "
+             "Without arguments: show all entries (name + UUID). "
+             "With <uuid>: show metadata of that entry."
+    )
+    parser_md_list.add_argument(
+        "uuid",
+        nargs="?",
+        help="Optional UUID of the dataset to inspect."
+    )
+    # Mutually exclusive flags
+    group = parser_md_list.add_mutually_exclusive_group()
+    group.add_argument(
+        "--sys",
+        action="store_true",
+        help="Show only system metadata (system_name, server, protocols)."
+    )
+    group.add_argument(
+        "--user",
+        action="store_true",
+        help="Show only user metadata (everything except system keys)."
+    )
+
+    parser_md_list.set_defaults(func=cmd_md_list)
+
 
     return parser
 
@@ -300,3 +329,11 @@ def cmd_create_meta_file(args):
         print(f"\nMetadata saved to: {json_path}")
     except Exception as e: # pylint: disable=broad-exception-caught
         print(f"Error saving metadata file: {e}")
+
+def cmd_md_list(args):
+    """List metadata entries or metadata details for a dataset."""
+    ckan_conn = get_ckan_connection()
+    try:
+        handle_md_list(ckan_conn, args)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"❌ Error: {e}")
