@@ -209,6 +209,8 @@ def merge_ckan_metadata(meta: dict, sys_meta: dict, extras: list[dict]) -> dict:
 
     return metadata
 
+# List utils
+
 def handle_md_list(ckan_conn, args):
     """Core logic for listing metadata entries from CKAN."""
     if not args.uuid:
@@ -228,13 +230,12 @@ def _list_all_datasets(ckan_conn):
 
     # Determine max lengths for formatting
     max_title_len = max(len(ds.get("title", "<no title>")) for ds in datasets)
-    max_uuid_len = max(len(ds.get("name", "<no uuid>")) for ds in datasets)
 
     # Print each dataset nicely
     for ds in datasets:
         title = ds.get("title", "<no title>")
-        uuid = ds.get("name", "<no uuid>")
-        print(f"- {title:<{max_title_len}} ({uuid})")
+        name = ds.get("name", "<no uuid>")
+        print(f"- {title:<{max_title_len}} ({name})")
 
 def _show_dataset_metadata(ckan_conn, args):
     """Show metadata for a specific dataset."""
@@ -295,3 +296,128 @@ def _print_dataset_info(dataset, system_meta, user_meta, args):
             print(f"  {k:<14}: {v}")
         print()
 
+
+#Search utils
+
+def handle_md_search(ckan_conn, args):
+    """Search for datasets in CKAN and print results."""
+    keyword = args.keyword or ""
+    org = args.org or ""
+    group = args.group or ""
+
+    if not keyword and not org and not group:
+        print("⚠️ Please provide at least one search criterion (keyword, org, or group).")
+        return
+
+    datasets = ckan_conn.list_all_datasets(include_private=True)
+    if not datasets:
+        print("⚠️ No datasets found on this CKAN instance.")
+        return
+
+    results = _search_datasets(datasets, keyword, org, group)
+    if not results:
+        print("⚠️ No datasets found matching the given criteria.")
+        return
+
+    # Print results in table-like format
+    print(f"Found {len(results)} datasets:\n")
+    _print_dataset_results(results)
+
+def _print_dataset_results(datasets):
+    """Nicely format and print CKAN dataset search results."""
+    if not datasets:
+        print("⚠️ No datasets found.")
+        return
+
+    # Compute max lengths for alignment
+    max_title_len = max(len(ds.get("title", "<no title>")) for ds in datasets)
+    max_name_len = max(len(ds.get("name", "<no uuid>")) for ds in datasets)
+    max_org_len = max(len(ds.get("organization", {}).get("name", "<no org>")) for ds in datasets)
+
+    header = (
+        f"{'Title':<{max_title_len}}  "
+        f"{'UUID':<{max_name_len}}  "
+        f"{'Organization':<{max_org_len}}  Groups"
+    )
+    print(header)
+    print("-" * len(header))
+
+    for ds in datasets:
+        title = ds.get("title", "<no title>")
+        name = ds.get("name", "<no uuid>")
+        org = ds.get("organization", {}).get("name", "<no org>")
+        groups = [g.get("name", "") for g in ds.get("groups", [])]
+        group_str = ", ".join(groups) if groups else "<no groups>"
+
+        print(f"{title:<{max_title_len}}  {name:<{max_name_len}}  {org:<{max_org_len}}  {group_str}")
+
+
+def _flatten_value_for_search(value):
+    """Recursively flatten a value (str, list, dict) into lowercase strings."""
+    if isinstance(value, str):
+        return [value.lower()]
+    if isinstance(value, list):
+        result = []
+        for v in value:
+            result.extend(_flatten_value_for_search(v))
+        return result
+    if isinstance(value, dict):
+        result = []
+        for k, v in value.items():
+            result.append(str(k).lower())
+            result.extend(_flatten_value_for_search(v))
+        return result
+    return [str(value).lower()]
+
+
+def _normalize_extras_for_search(extras):
+    """Flatten CKAN extras into lowercase strings for keyword search."""
+    meta_key_and_values = []
+
+    for e in extras:
+        key = e.get("key", "")
+        value = e.get("value", "")
+
+        # Include the key itself
+        if key:
+            meta_key_and_values.append(str(key).lower())
+
+        # Try to parse JSON values, fallback to string
+        try:
+            parsed = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            parsed = value
+
+        # Flatten values (list, dict, etc.) into strings
+        meta_key_and_values.extend(_flatten_value_for_search(parsed))
+
+    return meta_key_and_values
+
+def _dataset_matches(dataset, keyword="", org_filter="", group_filter=""):
+    """Check if a dataset matches keyword, org, and group filters."""
+    keyword = (keyword or "").lower()
+    org_filter = (org_filter or "").lower()
+    group_filter = (group_filter or "").lower()
+
+    title = dataset.get("title", "")
+    name = dataset.get("name", "")
+    org = dataset.get("organization", {}).get("name", "")
+    groups = [g.get("name", "") for g in dataset.get("groups", [])]
+    extras = dataset.get("extras", [])
+
+    # Combine title, name, and flattened extras for keyword search
+    combined_text = " ".join([title, name] + _normalize_extras_for_search(extras))
+
+    if keyword and keyword not in combined_text:
+        return False
+    if org_filter and org_filter != org.lower():
+        return False
+    if group_filter and group_filter not in [g.lower() for g in groups]:
+        return False
+
+    return True
+
+
+def _search_datasets(datasets, keyword=None, org=None, group=None):
+    """Return a list of datasets matching given filters."""
+    return [ds for ds in datasets if _dataset_matches(ds, keyword, org, group)]

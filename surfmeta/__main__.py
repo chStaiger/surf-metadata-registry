@@ -13,6 +13,7 @@ from surfmeta.ckan_conf import CKANConf, show_available
 from surfmeta.cli_utils import (
     get_ckan_connection,
     handle_md_list,
+    handle_md_search,
     load_and_validate_flat_json,
     merge_ckan_metadata,
     user_input_meta,
@@ -143,6 +144,12 @@ def build_parser():
 
     parser_md_list.set_defaults(func=cmd_md_list)
 
+    # md-search command (new)
+    parser_md_search = subparsers.add_parser("md-search", help="Search CKAN datasets")
+    parser_md_search.add_argument("--keyword", "-k", help="Keyword to search for in title, name, or metadata")
+    parser_md_search.add_argument("--org", "-o", help="Filter results by organization")
+    parser_md_search.add_argument("--group", "-g", help="Filter results by group")
+    parser_md_search.set_defaults(func=cmd_md_search)
 
     return parser
 
@@ -335,5 +342,13 @@ def cmd_md_list(args):
     ckan_conn = get_ckan_connection()
     try:
         handle_md_list(ckan_conn, args)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"❌ Error: {e}")
+
+def cmd_md_search(args):
+    """Search for entries."""
+    ckan_conn = get_ckan_connection()
+    try:
+        handle_md_search(ckan_conn, args)
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"❌ Error: {e}")
