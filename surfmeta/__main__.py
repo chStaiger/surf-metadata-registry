@@ -11,13 +11,13 @@ from ckanapi import NotAuthorized
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
 from surfmeta.cli_utils import (
+    create_dataset,
     get_ckan_connection,
     handle_md_list,
     handle_md_search,
     load_and_validate_flat_json,
     merge_ckan_metadata,
     user_input_meta,
-    create_dataset
 )
 from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta, spider_meta
 
