@@ -259,7 +259,7 @@ def cmd_create(args):
         sys_meta = snellius_meta()
     elif system[0] == "spider":
         sys_meta = spider_meta()
-    elif system[0] == "src.surf-hosted.nl":
+    elif system[0] == "src-surf-hosted-nl":
         sys_meta = rsc_meta()
     else:
         sys_meta = {}
