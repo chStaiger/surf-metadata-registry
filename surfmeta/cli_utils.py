@@ -91,22 +91,11 @@ def user_input_meta(ckan_conn: Ckan) -> dict:
     return metadata
 
 
-def create_dataset(ckan_conn: Ckan, meta: dict, sys_meta: dict | None = None):
+def create_dataset(ckan_conn: Ckan, meta: dict):
     """Create the dataset."""
-    if sys_meta:
-        extras = meta.get("extras", [])
-        for key, value in sys_meta.items():
-            # CKAN extras must be string key/value pairs
-            if not isinstance(value, str):
-                value = json.dumps(value)
-            extras.append({"key": key, "value": value})
-        meta["extras"] = extras
-
-    # Try creating the dataset
     try:
         response = ckan_conn.create_dataset(meta)
         uuid_value = next((item["value"] for item in meta["extras"] if item["key"] == "uuid"), None)
-        print("✅ Dataset created successfully!")
         print(f"🆔 UUID: {uuid_value}")
         print(f"🌐 Name: {response['title']}")
     except ValidationError as e:

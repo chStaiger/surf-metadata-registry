@@ -17,6 +17,7 @@ from surfmeta.cli_utils import (
     load_and_validate_flat_json,
     merge_ckan_metadata,
     user_input_meta,
+    create_dataset
 )
 from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta, spider_meta
 
@@ -263,7 +264,7 @@ def cmd_create(args):
 
     # Optional: verify checksum if file exists
     if args.path.is_file():
-        meta_checksum(sys_meta, args.path.absolute())
+        meta_checksum(sys_meta, args.path.resolve())
 
     # Load CKAN-style extras from metafile
     extras = []
@@ -274,13 +275,9 @@ def cmd_create(args):
             print(f"❌ Error reading metafile: {e}")
             return
 
-    print(meta)
-    print(sys_meta)
-    print(extras)
-
     ckan_metadata = merge_ckan_metadata(meta, sys_meta, extras)
     try:
-        ckan_conn.create_dataset(ckan_metadata, verbose=True)
+        create_dataset(ckan_conn, ckan_metadata)
         print("✅ Dataset created successfully!")
     except Exception as e: # pylint: disable=broad-exception-caught
         print(f"❌ Failed to create dataset: {e}")
