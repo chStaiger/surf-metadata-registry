@@ -77,28 +77,28 @@ def build_parser():
     parser_init.set_defaults(func=ckan_init)
 
     # `surfmeta ckan remove url_or_alias`
-    parser_remove = ckan_subparsers.add_parser("remove", help="Remove CKAN config")
-    parser_remove.add_argument("url_or_alias", help="URL or alias to remove")
+    parser_remove = ckan_subparsers.add_parser("remove", help="Remove CKAN config.")
+    parser_remove.add_argument("url_or_alias", help="URL or alias to remove.")
     parser_remove.set_defaults(func=ckan_remove)
 
     # `surfmeta ckan alias alias url`
-    parser_alias = ckan_subparsers.add_parser("alias", help="Set an alias for a CKAN URL")
-    parser_alias.add_argument("alias", help="Alias name")
-    parser_alias.add_argument("url", help="URL to associate with alias")
+    parser_alias = ckan_subparsers.add_parser("alias", help="Set an alias for a CKAN URL.")
+    parser_alias.add_argument("alias", help="Alias name.")
+    parser_alias.add_argument("url", help="URL to associate with alias.")
     parser_alias.set_defaults(func=ckan_alias)
 
     # `surfmeta ckan orgs`
-    parser_ckan_orgs = ckan_subparsers.add_parser("orgs", help="List organizations from CKAN")
-    parser_ckan_orgs.add_argument("--full", action="store_true", help="Include full organization metadata")
+    parser_ckan_orgs = ckan_subparsers.add_parser("orgs", help="List organizations from CKAN.")
+    parser_ckan_orgs.add_argument("--full", action="store_true", help="Include full organization metadata.")
     parser_ckan_orgs.set_defaults(func=ckan_list_orgs)
 
     # `surfmeta ckan groups`
-    parser_ckan_groups = ckan_subparsers.add_parser("groups", help="List groups from CKAN")
-    parser_ckan_groups.add_argument("--full", action="store_true", help="Include full group metadata")
+    parser_ckan_groups = ckan_subparsers.add_parser("groups", help="List groups from CKAN.")
+    parser_ckan_groups.add_argument("--full", action="store_true", help="Include full group metadata.")
     parser_ckan_groups.set_defaults(func=ckan_list_groups)
 
     # surfmeta create
-    parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
+    parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN.")
     parser_create.add_argument("path", type=Path, help="Path for which to create metadata.")
     parser_create.add_argument(
         "--metafile", type=Path, help="Path to a JSON file containing additional metadata."
@@ -109,7 +109,7 @@ def build_parser():
 
     parser_create_meta_file = subparsers.add_parser(
         "create-meta-file",
-        help="Interactively create a JSON metadata file"
+        help="Interactively create a JSON metadata file."
     )
     parser_create_meta_file.add_argument(
         "output",
@@ -146,10 +146,10 @@ def build_parser():
     parser_md_list.set_defaults(func=cmd_md_list)
 
     # md-search command (new)
-    parser_md_search = subparsers.add_parser("md-search", help="Search CKAN datasets")
+    parser_md_search = subparsers.add_parser("md-search", help="Search CKAN datasets.")
     parser_md_search.add_argument("--keyword", "-k", help="Keyword to search for in title, name, or metadata")
-    parser_md_search.add_argument("--org", "-o", help="Filter results by organization")
-    parser_md_search.add_argument("--group", "-g", help="Filter results by group")
+    parser_md_search.add_argument("--org", "-o", help="Filter results by organization.")
+    parser_md_search.add_argument("--group", "-g", help="Filter results by group.")
     parser_md_search.set_defaults(func=cmd_md_search)
 
     return parser
