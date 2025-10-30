@@ -19,7 +19,7 @@ from surfmeta.cli_utils import (
     merge_ckan_metadata,
     user_input_meta,
 )
-from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta, spider_meta
+from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta, spider_meta, rsc_meta
 
 MAIN_HELP_MESSAGE = """
 Create metadata for data on SURF infrastructure.
@@ -259,6 +259,8 @@ def cmd_create(args):
         sys_meta = snellius_meta()
     elif system[0] == "spider":
         sys_meta = spider_meta()
+    elif system[0] == "src.surf-hosted.nl":
+        sys_meta = rsc_meta()
     else:
         sys_meta = {}
 
