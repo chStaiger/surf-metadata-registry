@@ -253,13 +253,14 @@ def cmd_create(args):
 
     # Determine system metadata
     system = [name for name in SYSTEMS if name in get_system_info()]
+    print(get_system_info(), SYSTEMS)
     if len(system) == 0:
         sys_meta = local_meta()
     elif system[0] == "snellius":
         sys_meta = snellius_meta()
     elif system[0] == "spider":
         sys_meta = spider_meta()
-    elif system[0] == "src-surf-hosted-nl":
+    elif system[0] in ["src-surf-hosted-nl", "src.surf-hosted.nl"]:
         sys_meta = rsc_meta()
     else:
         sys_meta = {}

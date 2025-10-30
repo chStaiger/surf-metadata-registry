@@ -6,7 +6,7 @@ import subprocess
 import warnings
 from pathlib import Path
 
-SYSTEMS = ["snellius", "spider", "src.surf-hosted.nl"]
+SYSTEMS = ["snellius", "spider", "src-surf-hosted-nl", "src.surf-hosted.nl"]
 
 
 def get_system_info():
