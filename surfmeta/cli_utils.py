@@ -91,22 +91,11 @@ def user_input_meta(ckan_conn: Ckan) -> dict:
     return metadata
 
 
-def create_dataset(ckan_conn: Ckan, meta: dict, sys_meta: dict | None = None):
+def create_dataset(ckan_conn: Ckan, meta: dict):
     """Create the dataset."""
-    if sys_meta:
-        extras = meta.get("extras", [])
-        for key, value in sys_meta.items():
-            # CKAN extras must be string key/value pairs
-            if not isinstance(value, str):
-                value = json.dumps(value)
-            extras.append({"key": key, "value": value})
-        meta["extras"] = extras
-
-    # Try creating the dataset
     try:
         response = ckan_conn.create_dataset(meta)
         uuid_value = next((item["value"] for item in meta["extras"] if item["key"] == "uuid"), None)
-        print("✅ Dataset created successfully!")
         print(f"🆔 UUID: {uuid_value}")
         print(f"🌐 Name: {response['title']}")
     except ValidationError as e:
@@ -208,3 +197,216 @@ def merge_ckan_metadata(meta: dict, sys_meta: dict, extras: list[dict]) -> dict:
     metadata["extras"] = merged_extras
 
     return metadata
+
+# List utils
+
+def handle_md_list(ckan_conn, args):
+    """Core logic for listing metadata entries from CKAN."""
+    if not args.uuid:
+        _list_all_datasets(ckan_conn)
+    else:
+        _show_dataset_metadata(ckan_conn, args)
+
+
+def _list_all_datasets(ckan_conn):
+    """List all datasets in a table-like format (without org/groups)."""
+    datasets = ckan_conn.list_all_datasets(include_private=True)
+    if not datasets:
+        print("⚠️ No datasets found on this CKAN instance.")
+        return
+
+    print(f"Found {len(datasets)} datasets (including private):\n")
+
+    # Determine max lengths for formatting
+    max_title_len = max(len(ds.get("title", "<no title>")) for ds in datasets)
+
+    # Print each dataset nicely
+    for ds in datasets:
+        title = ds.get("title", "<no title>")
+        name = ds.get("name", "<no uuid>")
+        print(f"- {title:<{max_title_len}} ({name})")
+
+def _show_dataset_metadata(ckan_conn, args):
+    """Show metadata for a specific dataset."""
+    sys_keys = {"system_name", "server", "protocols", "uuid"}
+    dataset = ckan_conn.get_dataset_info(args.uuid)
+
+    extras = dataset.get("extras", [])
+    meta_dict = {e["key"]: e["value"] for e in extras if "key" in e and "value" in e}
+
+    # Separate system vs user metadata
+    system_meta = {k: v for k, v in meta_dict.items() if k in sys_keys}
+    user_meta = {k: v for k, v in meta_dict.items() if k not in sys_keys}
+
+    # Apply filtering if flags are set
+    filtered_meta = _apply_flags(args, system_meta, user_meta, meta_dict)
+
+    if not filtered_meta:
+        print(f"⚠️ No matching metadata found for dataset {args.uuid}.")
+        return
+
+    _print_dataset_info(dataset, system_meta, user_meta, args)
+
+
+def _apply_flags(args, system_meta, user_meta, meta_dict):
+    if args.sys:
+        return system_meta
+    if args.user:
+        return user_meta
+    return meta_dict
+
+
+def _print_dataset_info(dataset, system_meta, user_meta, args):
+    title = dataset.get("title", "<no title>")
+    name = dataset.get("name", "<no uuid>")
+    org = dataset.get("organization", {}).get("name", "<no organization>")
+    groups = [g.get("name", "") for g in dataset.get("groups", [])]
+    group_str = ", ".join(groups) if groups else "<no groups>"
+
+    print(f"\nMetadata for dataset: {title} (UUID: {name})\n")
+
+    if not args.sys and not args.user:
+        print(f"Organization: {org}")
+        print(f"Groups      : {group_str}\n")
+
+    if system_meta and not args.user:
+        print("System Metadata:")
+        for k, v in system_meta.items():
+            if isinstance(v, list):
+                v = ", ".join(v)
+            print(f"  {k:<14}: {v}")
+        print()
+
+    if user_meta and not args.sys:
+        print("User Metadata:")
+        for k, v in user_meta.items():
+            if isinstance(v, list):
+                v = ", ".join(v)
+            print(f"  {k:<14}: {v}")
+        print()
+
+
+#Search utils
+
+def handle_md_search(ckan_conn, args):
+    """Search for datasets in CKAN and print results."""
+    keyword = args.keyword or ""
+    org = args.org or ""
+    group = args.group or ""
+
+    if not keyword and not org and not group:
+        print("⚠️ Please provide at least one search criterion (keyword, org, or group).")
+        return
+
+    datasets = ckan_conn.list_all_datasets(include_private=True)
+    if not datasets:
+        print("⚠️ No datasets found on this CKAN instance.")
+        return
+
+    results = _search_datasets(datasets, keyword, org, group)
+    if not results:
+        print("⚠️ No datasets found matching the given criteria.")
+        return
+
+    # Print results in table-like format
+    print(f"Found {len(results)} datasets:\n")
+    _print_dataset_results(results)
+
+def _print_dataset_results(datasets):
+    """Nicely format and print CKAN dataset search results."""
+    if not datasets:
+        print("⚠️ No datasets found.")
+        return
+
+    # Compute max lengths for alignment
+    max_title_len = max(len(ds.get("title", "<no title>")) for ds in datasets)
+    max_name_len = max(len(ds.get("name", "<no uuid>")) for ds in datasets)
+    max_org_len = max(len(ds.get("organization", {}).get("name", "<no org>")) for ds in datasets)
+
+    header = (
+        f"{'Title':<{max_title_len}}  "
+        f"{'UUID':<{max_name_len}}  "
+        f"{'Organization':<{max_org_len}}  Groups"
+    )
+    print(header)
+    print("-" * len(header))
+
+    for ds in datasets:
+        title = ds.get("title", "<no title>")
+        name = ds.get("name", "<no uuid>")
+        org = ds.get("organization", {}).get("name", "<no org>")
+        groups = [g.get("name", "") for g in ds.get("groups", [])]
+        group_str = ", ".join(groups) if groups else "<no groups>"
+
+        print(f"{title:<{max_title_len}}  {name:<{max_name_len}}  {org:<{max_org_len}}  {group_str}")
+
+
+def _flatten_value_for_search(value):
+    """Recursively flatten a value (str, list, dict) into lowercase strings."""
+    if isinstance(value, str):
+        return [value.lower()]
+    if isinstance(value, list):
+        result = []
+        for v in value:
+            result.extend(_flatten_value_for_search(v))
+        return result
+    if isinstance(value, dict):
+        result = []
+        for k, v in value.items():
+            result.append(str(k).lower())
+            result.extend(_flatten_value_for_search(v))
+        return result
+    return [str(value).lower()]
+
+
+def _normalize_extras_for_search(extras):
+    """Flatten CKAN extras into lowercase strings for keyword search."""
+    meta_key_and_values = []
+
+    for e in extras:
+        key = e.get("key", "")
+        value = e.get("value", "")
+
+        # Include the key itself
+        if key:
+            meta_key_and_values.append(str(key).lower())
+
+        # Try to parse JSON values, fallback to string
+        try:
+            parsed = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            parsed = value
+
+        # Flatten values (list, dict, etc.) into strings
+        meta_key_and_values.extend(_flatten_value_for_search(parsed))
+
+    return meta_key_and_values
+
+def _dataset_matches(dataset, keyword="", org_filter="", group_filter=""):
+    """Check if a dataset matches keyword, org, and group filters."""
+    keyword = (keyword or "").lower()
+    org_filter = (org_filter or "").lower()
+    group_filter = (group_filter or "").lower()
+
+    title = dataset.get("title", "")
+    name = dataset.get("name", "")
+    org = dataset.get("organization", {}).get("name", "")
+    groups = [g.get("name", "") for g in dataset.get("groups", [])]
+    extras = dataset.get("extras", [])
+
+    # Combine title, name, and flattened extras for keyword search
+    combined_text = " ".join([title, name] + _normalize_extras_for_search(extras))
+
+    if keyword and keyword not in combined_text:
+        return False
+    if org_filter and org_filter != org.lower():
+        return False
+    if group_filter and group_filter not in [g.lower() for g in groups]:
+        return False
+
+    return True
+
+
+def _search_datasets(datasets, keyword=None, org=None, group=None):
+    """Return a list of datasets matching given filters."""
+    return [ds for ds in datasets if _dataset_matches(ds, keyword, org, group)]
