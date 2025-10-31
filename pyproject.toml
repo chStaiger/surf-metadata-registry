@@ -47,6 +47,11 @@ packages = ["surfmeta"]
 [tool.setuptools_scm]
 write_to = "surfmeta/_version.py"
 
+[tool.pylint]
+disable = [
+    "W0718",  # Catching too general exception Exception
+]
+
 [tool.pylint.'MASTER']
 ignore-patterns="_version.py"
 

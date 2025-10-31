@@ -1,29 +1,11 @@
 """Useful functions for cli."""
 
-import json
-import sys
 import uuid
-from pathlib import Path
-from typing import Any, Dict, List
 
 from ckanapi import ValidationError
 
 from surfmeta.ckan import Ckan
-from surfmeta.ckan_conf import CKANConf
-
-
-def get_ckan_connection():
-    """Instantiate the ckan connection from the current ckan config."""
-    conf = CKANConf()
-    url = conf.cur_ckan
-    _, entry = conf.get_entry(url)
-
-    if "token" not in entry:
-        print(f"AUTHENTICATION ERROR: no token provided for {url}.")
-        sys.exit(1)
-
-    return Ckan(url, entry["token"])
-
+from surfmeta.metadata_utils import normalize_extras_for_search, load_and_validate_flat_json
 
 def user_input_meta(ckan_conn: Ckan) -> dict:
     """Retrieve metadata input through CLI with organisation and optional group selection."""
@@ -104,101 +86,8 @@ def create_dataset(ckan_conn: Ckan, meta: dict):
         print("❌ Failed to create dataset:", e)
 
 
-def load_and_validate_flat_json(json_path: Path) -> List[Dict[str, str]]:
-    """Load a JSON file, ensure it contains only flat key-value pairs.
-
-    This function only allows primitive values (str, int, float, bool, None)
-    or lists of primitives. It converts the JSON into a list of CKAN-style
-    extras dictionaries: [{'key': ..., 'value': ...}, ...].
-
-    Args:
-        json_path (Path): Path to the JSON metafile.
-
-    Returns:
-        List[Dict[str, str]]: List of CKAN key/value entries.
-
-    Raises:
-        ValueError: If the JSON is invalid or contains nested structures.
-        json.JSONDecodeError: If the file is not valid JSON.
-        OSError: If the file cannot be read.
-
-    """
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    # Ensure root is a dict
-    if not isinstance(data, dict):
-        raise ValueError(f"Metafile '{json_path}' must contain a JSON object (key-value pairs).")
-
-    def is_simple_value(v: Any) -> bool:
-        """Check if value is a simple type or list of simple types."""
-        if isinstance(v, (str, int, float, bool)) or v is None:
-            return True
-        if isinstance(v, list):
-            return all(isinstance(i, (str, int, float, bool)) or i is None for i in v)
-        return False
-
-    # Validate and build CKAN-style pairs
-    extras = []
-    for key, value in data.items():
-        if not is_simple_value(value):
-            raise ValueError(
-                f"Metafile '{json_path}' contains unsupported nested structures for key: '{key}'. "
-                "Only primitive types or lists of primitives are allowed."
-            )
-
-        # Convert lists to JSON string; primitives to str
-        if isinstance(value, list):
-            value_str = json.dumps(value)  # e.g. ["md5", "15f8..."]
-        else:
-            value_str = str(value) if value is not None else ""
-
-        extras.append({"key": key, "value": value_str})
-
-    return extras
-
-
-def merge_ckan_metadata(meta: dict, sys_meta: dict, extras: list[dict]) -> dict:
-    """Merge main metadata, system metadata, and user extras into a CKAN-ready metadata dict.
-
-    Parameters
-    ----------
-    meta : dict
-        Main dataset metadata, may include 'extras'.
-    sys_meta : dict
-        System metadata; values can be str, numbers, tuples, or lists.
-    extras : list of dict
-        User-provided extras already in CKAN style [{'key': ..., 'value': ...}].
-
-    Returns
-    -------
-    dict
-        CKAN-ready metadata dictionary with merged 'extras'.
-
-    """
-    # Start with a copy of meta to avoid mutating the original
-    metadata = dict(meta)
-
-    # Initialize extras list
-    merged_extras = list(metadata.get("extras", []))  # existing extras in meta
-
-    # Convert sys_meta items into CKAN extras format
-    for key, value in sys_meta.items():
-        if isinstance(value, (tuple, list)):
-            value_str = json.dumps(value)
-        else:
-            value_str = str(value)
-        merged_extras.append({"key": key, "value": value_str})
-
-    # Add user-provided extras
-    merged_extras.extend(extras)
-
-    # Set merged extras back
-    metadata["extras"] = merged_extras
-
-    return metadata
-
 # List utils
+
 
 def handle_md_list(ckan_conn, args):
     """Core logic for listing metadata entries from CKAN."""
@@ -225,6 +114,7 @@ def _list_all_datasets(ckan_conn):
         title = ds.get("title", "<no title>")
         name = ds.get("name", "<no uuid>")
         print(f"- {title:<{max_title_len}} ({name})")
+
 
 def _show_dataset_metadata(ckan_conn, args):
     """Show metadata for a specific dataset."""
@@ -286,7 +176,8 @@ def _print_dataset_info(dataset, system_meta, user_meta, args):
         print()
 
 
-#Search utils
+# Search utils
+
 
 def handle_md_search(ckan_conn, args):
     """Search for datasets in CKAN and print results."""
@@ -312,6 +203,7 @@ def handle_md_search(ckan_conn, args):
     print(f"Found {len(results)} datasets:\n")
     _print_dataset_results(results)
 
+
 def _print_dataset_results(datasets):
     """Nicely format and print CKAN dataset search results."""
     if not datasets:
@@ -323,11 +215,7 @@ def _print_dataset_results(datasets):
     max_name_len = max(len(ds.get("name", "<no uuid>")) for ds in datasets)
     max_org_len = max(len(ds.get("organization", {}).get("name", "<no org>")) for ds in datasets)
 
-    header = (
-        f"{'Title':<{max_title_len}}  "
-        f"{'UUID':<{max_name_len}}  "
-        f"{'Organization':<{max_org_len}}  Groups"
-    )
+    header = f"{'Title':<{max_title_len}}  {'UUID':<{max_name_len}}  {'Organization':<{max_org_len}}  Groups"
     print(header)
     print("-" * len(header))
 
@@ -340,47 +228,6 @@ def _print_dataset_results(datasets):
 
         print(f"{title:<{max_title_len}}  {name:<{max_name_len}}  {org:<{max_org_len}}  {group_str}")
 
-
-def _flatten_value_for_search(value):
-    """Recursively flatten a value (str, list, dict) into lowercase strings."""
-    if isinstance(value, str):
-        return [value.lower()]
-    if isinstance(value, list):
-        result = []
-        for v in value:
-            result.extend(_flatten_value_for_search(v))
-        return result
-    if isinstance(value, dict):
-        result = []
-        for k, v in value.items():
-            result.append(str(k).lower())
-            result.extend(_flatten_value_for_search(v))
-        return result
-    return [str(value).lower()]
-
-
-def _normalize_extras_for_search(extras):
-    """Flatten CKAN extras into lowercase strings for keyword search."""
-    meta_key_and_values = []
-
-    for e in extras:
-        key = e.get("key", "")
-        value = e.get("value", "")
-
-        # Include the key itself
-        if key:
-            meta_key_and_values.append(str(key).lower())
-
-        # Try to parse JSON values, fallback to string
-        try:
-            parsed = json.loads(value)
-        except (json.JSONDecodeError, TypeError):
-            parsed = value
-
-        # Flatten values (list, dict, etc.) into strings
-        meta_key_and_values.extend(_flatten_value_for_search(parsed))
-
-    return meta_key_and_values
 
 def _dataset_matches(dataset, keyword="", org_filter="", group_filter=""):
     """Check if a dataset matches keyword, org, and group filters."""
@@ -395,7 +242,7 @@ def _dataset_matches(dataset, keyword="", org_filter="", group_filter=""):
     extras = dataset.get("extras", [])
 
     # Combine title, name, and flattened extras for keyword search
-    combined_text = " ".join([title, name] + _normalize_extras_for_search(extras))
+    combined_text = " ".join([title, name] + normalize_extras_for_search(extras))
 
     if keyword and keyword not in combined_text:
         return False
@@ -410,3 +257,56 @@ def _dataset_matches(dataset, keyword="", org_filter="", group_filter=""):
 def _search_datasets(datasets, keyword=None, org=None, group=None):
     """Return a list of datasets matching given filters."""
     return [ds for ds in datasets if _dataset_matches(ds, keyword, org, group)]
+
+
+# Metadata update
+def handle_md_update(ckan_conn, args):
+    """Update metadata for an existing dataset in CKAN using a JSON metafile."""
+    dataset_id = args.uuid
+    metafile = args.metafile
+
+    if not metafile:
+        print("❌ You must provide a --metafile argument containing metadata JSON.")
+        return
+    if not metafile.exists():
+        print(f"❌ File not found: {metafile}")
+        return
+
+    try:
+        dataset = ckan_conn.get_dataset_info(dataset_id)
+    except Exception as e:
+        print(f"❌ Could not retrieve dataset '{dataset_id}': {e}")
+        return
+
+    print(
+        f"\n🛠 Updating dataset '{dataset.get('title', '<no title>')}' "
+        f"({dataset_id}) with metadata from {metafile}\n"
+    )
+
+    # Load and validate metafile (flat JSON)
+    try:
+        new_extras = load_and_validate_flat_json(metafile)
+    except Exception as e:
+        print(f"❌ Error reading metafile '{metafile}': {e}")
+        return
+
+    # Convert new extras into dict form for merging
+    new_meta_dict = {e["key"]: e["value"] for e in new_extras}
+
+    # Extract existing extras as dict
+    existing_extras = {e["key"]: e["value"] for e in dataset.get("extras", []) if "key" in e and "value" in e}
+
+    # Merge — replace existing keys with new ones
+    merged_extras = {**existing_extras, **new_meta_dict}
+
+    # Convert back to CKAN-style list
+    dataset["extras"] = [{"key": k, "value": str(v)} for k, v in merged_extras.items()]
+
+    # Push update
+    try:
+        updated = ckan_conn.update_dataset(dataset)
+        print(f"✅ Dataset '{updated['title']}' successfully updated with metadata from '{metafile}'.")
+    except ValidationError as e:
+        print("❌ Validation error while updating dataset:", e)
+    except Exception as e:
+        print("❌ Failed to update dataset:", e)

@@ -10,37 +10,21 @@ from ckanapi import NotAuthorized
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
-from surfmeta.cli_utils import (
-    create_dataset,
-    get_ckan_connection,
-    handle_md_list,
-    handle_md_search,
+from surfmeta.metadata_utils import (
+    get_sys_meta,
+    input_metadata_extras,
     load_and_validate_flat_json,
     merge_ckan_metadata,
+)
+from surfmeta.cli_utils import (
+    create_dataset,
+    handle_md_list,
+    handle_md_search,
+    handle_md_update,
     user_input_meta,
 )
-from surfmeta.sys_utils import SYSTEMS, get_system_info, local_meta, meta_checksum, snellius_meta, spider_meta, rsc_meta
-
-MAIN_HELP_MESSAGE = """
-Create metadata for data on SURF infrastructure.
-
-Usage: surfmeta [subcommand] [options]
-
-Available subcommands:
-    ckan        Manage CKAN configurations
-    create      Create a new dataset only containing metadata in CKAN
-
-Example usage:
-    surfmeta ckan list
-    surfmeta ckan switch myalias
-    surfmeta ckan init
-    surfmeta ckan remove ckanurl
-    surfmeta ckan alias myalias https://demo.ckan.org
-    surfmeta ckan orgs
-    surfmeta ckan groups
-
-    surfmeta create path
-"""
+from surfmeta.utils import get_ckan_connection
+from surfmeta.system_metadata import meta_checksum
 
 CKANCONFIG = CKANConf()
 
@@ -48,128 +32,113 @@ CKANCONFIG = CKANConf()
 def build_parser():
     """Create parser and subparsers and arguments."""
     parser = argparse.ArgumentParser(
-        prog="surfmeta", description=MAIN_HELP_MESSAGE, formatter_class=argparse.RawDescriptionHelpFormatter
+        prog="surfmeta",
+        description="Create and manage metadata for datasets on SURF infrastructure.",
+        usage="surfmeta [-h] <command> [<args>]",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  surfmeta ckan list
+  surfmeta ckan init
+  surfmeta ckan alias demo https://demo.ckan.org
+  surfmeta create ./path/to/data
+  surfmeta md-update <uuid> --metafile metadata.json
+
+Use "surfmeta <command> --help" for more information on a command.""",
     )
 
-    # Top-level subparser: `ckan`
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    # --- Main subcommands ---
+    subparsers = parser.add_subparsers(
+        title="Available commands",
+        metavar="<command>",
+        dest="command",
+        required=True,
+        help="Run 'surfmeta <command> --help' for more details",
+    )
 
     # ───────────────────────────────
     # CKAN subparser group
-    # surfmeta ckan <subcommand>
     # ───────────────────────────────
+    ckan_parser = subparsers.add_parser("ckan", help="Manage CKAN configurations and connections")
+    ckan_subparsers = ckan_parser.add_subparsers(
+        dest="ckan_command", required=True, metavar="<ckan-command>", title="CKAN commands"
+    )
 
-    ckan_parser = subparsers.add_parser("ckan", help="CKAN configuration commands")
-    ckan_subparsers = ckan_parser.add_subparsers(dest="ckan_command", required=True)
-
-    # `surfmeta ckan list`
     parser_list = ckan_subparsers.add_parser("list", help="List all CKAN configurations")
     parser_list.set_defaults(func=ckan_list)
 
-    # `surfmeta ckan switch url_or_alias`
-    parser_switch = ckan_subparsers.add_parser("switch", help="Switch active CKAN config")
+    parser_switch = ckan_subparsers.add_parser("switch", help="Switch active CKAN configuration")
     parser_switch.add_argument("url_or_alias", help="URL or alias to switch to")
     parser_switch.set_defaults(func=ckan_switch)
 
-    # `surfmeta ckan init password`
-    parser_init = ckan_subparsers.add_parser("init", help="Initialize CKAN config with token")
-    parser_init.add_argument("url_or_alias", help="CKAN URL or lias for the URL.")
+    parser_init = ckan_subparsers.add_parser("init", help="Initialize CKAN config with API token")
+    parser_init.add_argument("url_or_alias", help="CKAN URL or alias")
     parser_init.set_defaults(func=ckan_init)
 
-    # `surfmeta ckan remove url_or_alias`
-    parser_remove = ckan_subparsers.add_parser("remove", help="Remove CKAN config.")
-    parser_remove.add_argument("url_or_alias", help="URL or alias to remove.")
+    parser_remove = ckan_subparsers.add_parser("remove", help="Remove CKAN configuration")
+    parser_remove.add_argument("url_or_alias", help="URL or alias to remove")
     parser_remove.set_defaults(func=ckan_remove)
 
-    # `surfmeta ckan alias alias url`
-    parser_alias = ckan_subparsers.add_parser("alias", help="Set an alias for a CKAN URL.")
-    parser_alias.add_argument("alias", help="Alias name.")
-    parser_alias.add_argument("url", help="URL to associate with alias.")
+    parser_alias = ckan_subparsers.add_parser("alias", help="Set an alias for a CKAN URL")
+    parser_alias.add_argument("alias", help="Alias name")
+    parser_alias.add_argument("url", help="URL to associate with the alias")
     parser_alias.set_defaults(func=ckan_alias)
 
-    # `surfmeta ckan orgs`
-    parser_ckan_orgs = ckan_subparsers.add_parser("orgs", help="List organizations from CKAN.")
-    parser_ckan_orgs.add_argument("--full", action="store_true", help="Include full organization metadata.")
+    parser_ckan_orgs = ckan_subparsers.add_parser("orgs", help="List organizations from CKAN")
+    parser_ckan_orgs.add_argument("--full", action="store_true", help="Include full organization metadata")
     parser_ckan_orgs.set_defaults(func=ckan_list_orgs)
 
-    # `surfmeta ckan groups`
-    parser_ckan_groups = ckan_subparsers.add_parser("groups", help="List groups from CKAN.")
-    parser_ckan_groups.add_argument("--full", action="store_true", help="Include full group metadata.")
+    parser_ckan_groups = ckan_subparsers.add_parser("groups", help="List groups from CKAN")
+    parser_ckan_groups.add_argument("--full", action="store_true", help="Include full group metadata")
     parser_ckan_groups.set_defaults(func=ckan_list_groups)
 
-    # surfmeta create
-    parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN.")
-    parser_create.add_argument("path", type=Path, help="Path for which to create metadata.")
-    parser_create.add_argument(
-        "--metafile", type=Path, help="Path to a JSON file containing additional metadata."
-    )
+    # ───────────────────────────────
+    # create
+    # ───────────────────────────────
+    parser_create = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
+    parser_create.add_argument("path", type=Path, help="Path for which to create metadata")
+    parser_create.add_argument("--metafile", type=Path, help="Path to a JSON file with additional metadata")
     parser_create.set_defaults(func=cmd_create)
 
-    # surfmeta create-meta-file
-
+    # ───────────────────────────────
+    # create-meta-file
+    # ───────────────────────────────
     parser_create_meta_file = subparsers.add_parser(
-        "create-meta-file",
-        help="Interactively create a JSON metadata file."
+        "md-create", help="Interactively create a JSON metadata file"
     )
-    parser_create_meta_file.add_argument(
-        "output",
-        type=Path,
-        help="Path to store the metadata JSON file"
-    )
+    parser_create_meta_file.add_argument("output", type=Path, help="Path to store the metadata JSON file")
     parser_create_meta_file.set_defaults(func=cmd_create_meta_file)
 
-    # surfmeta md-list
-    parser_md_list = subparsers.add_parser(
-        "md-list",
-        help="List metadata entries from CKAN. "
-             "Without arguments: show all entries (name + UUID). "
-             "With <uuid>: show metadata of that entry."
-    )
-    parser_md_list.add_argument(
-        "uuid",
-        nargs="?",
-        help="Optional UUID of the dataset to inspect."
-    )
-    # Mutually exclusive flags
+    # ───────────────────────────────
+    # md-list
+    # ───────────────────────────────
+    parser_md_list = subparsers.add_parser("md-list", help="List metadata entries from CKAN")
+    parser_md_list.add_argument("uuid", nargs="?", help="Optional UUID of the dataset to inspect")
     group = parser_md_list.add_mutually_exclusive_group()
-    group.add_argument(
-        "--sys",
-        action="store_true",
-        help="Show only system metadata (system_name, server, protocols)."
-    )
-    group.add_argument(
-        "--user",
-        action="store_true",
-        help="Show only user metadata (everything except system keys)."
-    )
-
+    group.add_argument("--sys", action="store_true", help="Show only system metadata")
+    group.add_argument("--user", action="store_true", help="Show only user metadata")
     parser_md_list.set_defaults(func=cmd_md_list)
 
-    # md-search command (new)
-    parser_md_search = subparsers.add_parser("md-search", help="Search CKAN datasets.")
+    # ───────────────────────────────
+    # md-search
+    # ───────────────────────────────
+    parser_md_search = subparsers.add_parser("md-search", help="Search CKAN datasets")
     parser_md_search.add_argument("--keyword", "-k", help="Keyword to search for in title, name, or metadata")
-    parser_md_search.add_argument("--org", "-o", help="Filter results by organization.")
-    parser_md_search.add_argument("--group", "-g", help="Filter results by group.")
+    parser_md_search.add_argument("--org", "-o", help="Filter by organization")
+    parser_md_search.add_argument("--group", "-g", help="Filter by group")
     parser_md_search.set_defaults(func=cmd_md_search)
+
+    # ───────────────────────────────
+    # md-update
+    # ───────────────────────────────
+    parser_md_update = subparsers.add_parser("md-update", help="Update metadata for an existing dataset")
+    parser_md_update.add_argument("uuid", help="UUID of the dataset to update")
+    parser_md_update.add_argument("--metafile", type=Path, required=True, help="Path to JSON metadata file")
+    parser_md_update.set_defaults(func=cmd_md_update)
 
     return parser
 
 
-def main():
-    """CLI with different subcommands."""
-    parser = build_parser()
-    if len(sys.argv) == 1:
-        parser.print_help(sys.stderr)
-        sys.exit(1)
-    args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        print(f"DEBUG: no function for {args}")
-    sys.exit(1)
-
-
-# CKAN CONFIG FUNCTIONS
+# CKAN COMMAND FUNCTIONS
 def ckan_list(args):  # pylint: disable=unused-argument
     """List all available ckan configurations."""
     show_available(CKANCONFIG)
@@ -249,21 +218,9 @@ def ckan_list_groups(args):
 def cmd_create(args):
     """Create a new dataset in CKAN."""
     ckan_conn = get_ckan_connection()
-    meta = user_input_meta(ckan_conn)
 
     # Determine system metadata
-    system = [name for name in SYSTEMS if name in get_system_info()]
-    print(get_system_info(), SYSTEMS)
-    if len(system) == 0:
-        sys_meta = local_meta()
-    elif system[0] == "snellius":
-        sys_meta = snellius_meta()
-    elif system[0] == "spider":
-        sys_meta = spider_meta()
-    elif system[0] in ["src-surf-hosted-nl", "src.surf-hosted.nl"]:
-        sys_meta = rsc_meta()
-    else:
-        sys_meta = {}
+    sys_meta = get_sys_meta()
 
     # Optional: verify checksum if file exists
     if args.path.is_file():
@@ -274,68 +231,34 @@ def cmd_create(args):
     if args.metafile:
         try:
             extras = load_and_validate_flat_json(args.metafile)
-        except Exception as e: # pylint: disable=broad-exception-caught
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"❌ Error reading metafile: {e}")
             return
+
+    meta = user_input_meta(ckan_conn)
 
     ckan_metadata = merge_ckan_metadata(meta, sys_meta, extras)
     try:
         create_dataset(ckan_conn, ckan_metadata)
         print("✅ Dataset created successfully!")
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"❌ Failed to create dataset: {e}")
 
 
 def cmd_create_meta_file(args):
-    """Create a JSON metadata file interactively.
-
-    Steps:
-    1. Ask for Prov-O metadata.
-    2. Ask for user-defined metadata (key-value pairs).
-    3. Save to the specified file.
-    """
+    """Create a JSON metadata file interactively."""
     json_path = Path(args.output).absolute()
-    print(json_path)
 
-    # Step 1: Collect Prov-O metadata
-    print("Add Prov-O metadata (leave blank to skip any field):")
-    prov_fields = [
-        "prov:wasGeneratedBy",
-        "prov:wasDerivedFrom",
-        "prov:startedAtTime",
-        "prov:endedAtTime",
-        "prov:actedOnBehalfOf",
-        "prov:SoftwareAgent",
-    ]
-    prov_metadata = {}
-    for field in prov_fields:
-        value = input(f"{field}: ").strip()
-        if value:
-            prov_metadata[field] = value
-
-    # Step 2: Collect user-defined metadata
-    print("\nAdd your own metadata (key-value pairs). Type 'done' as key to finish.")
-    user_metadata = {}
-    while True:
-        key = input("Key: ").strip()
-        if key.lower() == "done":
-            break
-        if not key:
-            print("Key cannot be empty.")
-            continue
-        value = input("Value: ").strip()
-        user_metadata[key] = value
-
-    # Combine metadata
+    prov_metadata, user_metadata = input_metadata_extras()
     all_metadata = {**prov_metadata, **user_metadata}
 
-    # Step 3: Save to JSON file
     try:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(all_metadata, f, indent=4)
         print(f"\nMetadata saved to: {json_path}")
-    except Exception as e: # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Error saving metadata file: {e}")
+
 
 def cmd_md_list(args):
     """List metadata entries or metadata details for a dataset."""
@@ -345,6 +268,7 @@ def cmd_md_list(args):
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"❌ Error: {e}")
 
+
 def cmd_md_search(args):
     """Search for entries."""
     ckan_conn = get_ckan_connection()
@@ -352,3 +276,26 @@ def cmd_md_search(args):
         handle_md_search(ckan_conn, args)
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"❌ Error: {e}")
+
+
+def cmd_md_update(args):
+    """Update metadata for a dataset."""
+    ckan_conn = get_ckan_connection()
+    try:
+        handle_md_update(ckan_conn, args)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"❌ Error: {e}")
+
+
+def main():
+    """CLI with different subcommands."""
+    parser = build_parser()
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    args = parser.parse_args()
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        print(f"DEBUG: no function for {args}")
+    sys.exit(1)

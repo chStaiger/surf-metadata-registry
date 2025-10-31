@@ -383,3 +383,37 @@ class Ckan:
             return groups
         except Exception as e:
             raise HTTPError(f"Error listing groups: {e}") from e
+
+    def update_dataset(self, dataset_dict: dict):
+        """Update an existing CKAN dataset.
+
+        Parameters
+        ----------
+        dataset_dict : dict
+            A full dataset dictionary, including 'name' or 'id' and updated fields.
+            Typically this includes an updated 'extras' list.
+
+        Returns
+        -------
+        dict
+            The updated dataset as returned by CKAN.
+
+        Raises
+        ------
+        ValidationError
+            If CKAN rejects the update due to schema or validation issues.
+        NotFound
+            If the dataset does not exist.
+        Exception
+            For other unexpected errors.
+
+        """
+        try:
+            updated = self.api.action.package_update(**dataset_dict)
+            return updated
+        except ValidationError:
+            raise
+        except NotFound:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Unexpected error while updating dataset: {e}") from e
