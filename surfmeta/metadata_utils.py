@@ -20,7 +20,6 @@ PROVO = [
 def get_sys_meta() -> dict:
     """Lookup the system and create the metadata."""
     system = [name for name in SYSTEMS if name in get_system_info()]
-    print(get_system_info(), SYSTEMS)
     if len(system) == 0:
         sys_meta = local_meta()
     elif system[0] == "snellius":

@@ -1,4 +1,4 @@
-"""Commandline tool to register metadata for data on SURF infrastructure."""
+"""Commandline tool functions."""
 
 import argparse
 import json
@@ -15,13 +15,6 @@ from surfmeta.metadata_utils import (
     input_metadata_extras,
     load_and_validate_flat_json,
     merge_ckan_metadata,
-)
-from surfmeta.cli_utils import (
-    create_dataset,
-    handle_md_list,
-    handle_md_search,
-    handle_md_update,
-    user_input_meta,
 )
 from surfmeta.utils import get_ckan_connection
 from surfmeta.system_metadata import meta_checksum
