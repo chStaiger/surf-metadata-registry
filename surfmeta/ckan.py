@@ -57,24 +57,22 @@ class Ckan:
         except NotAuthorized:
             return False
 
-    def dataset_exists(self, dataset_id: str) -> bool:
-        """Check whether a dataset exists.
+    def dataset_exists(self, dataset_id):
+        """Check if a dataset exists in CKAN."""
+        print(f"DEBUG: Checking existence of dataset_id='{dataset_id}'")  # debug log
 
-        Parameters
-        ----------
-        dataset_id : str
-            The dataset name or ID.
-
-        Returns
-        -------
-        bool
-            True if the dataset exists, False otherwise.
-
-        """
         try:
-            self.api.action.package_show(id=dataset_id)
+            dataset = self.get_dataset_info(dataset_id)
+            print(f"DEBUG: Dataset found: {dataset.get('name', dataset_id)}")
             return True
         except NotFound:
+            print(f"DEBUG: Dataset '{dataset_id}' not found (NotFound exception raised).")
+            return False
+        except NotAuthorized:
+            print(f"DEBUG: Not authorized to access dataset '{dataset_id}'.")
+            return False
+        except Exception as e:
+            print(f"DEBUG: Unexpected error while checking dataset '{dataset_id}': {e}")
             return False
 
     def get_dataset_info(self, dataset_id: str) -> dict:
@@ -383,3 +381,113 @@ class Ckan:
             return groups
         except Exception as e:
             raise HTTPError(f"Error listing groups: {e}") from e
+
+    def update_dataset(self, dataset_dict: dict):
+        """Update an existing CKAN dataset.
+
+        Parameters
+        ----------
+        dataset_dict : dict
+            A full dataset dictionary, including 'name' or 'id' and updated fields.
+            Typically this includes an updated 'extras' list.
+
+        Returns
+        -------
+        dict
+            The updated dataset as returned by CKAN.
+
+        Raises
+        ------
+        ValidationError
+            If CKAN rejects the update due to schema or validation issues.
+        NotFound
+            If the dataset does not exist.
+        Exception
+            For other unexpected errors.
+
+        """
+        try:
+            updated = self.api.action.package_update(**dataset_dict)
+            return updated
+        except ValidationError:
+            raise
+        except NotFound:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Unexpected error while updating dataset: {e}") from e
+
+    def delete_dataset(self, dataset_id: str, verbose: bool = True) -> bool:
+        """Delete a CKAN dataset by ID.
+
+        :param dataset_id: The UUID or name of the dataset.
+        :param verbose: Whether to print status messages.
+        :return: True if deleted successfully.
+        :raises NotFound: If the dataset does not exist.
+        :raises NotAuthorized: If deletion is not permitted.
+        :raises HTTPError: For other API errors.
+        """
+        print(f"DEBUG: Checking existence of dataset_id='{dataset_id}'")
+        if not self.dataset_exists(dataset_id):
+            raise NotFound(f"Dataset '{dataset_id}' not found.")
+
+        try:
+            print(f"DEBUG: Attempting to delete dataset '{dataset_id}'")
+            self.api.action.package_delete(id=dataset_id, purge=True)
+            print(f"DEBUG: Delete request sent for '{dataset_id}'")
+        except NotAuthorized as e:
+            raise NotAuthorized(f"Not authorized to delete dataset '{dataset_id}': {e}") from e
+        except Exception as e:
+            raise HTTPError(f"Error deleting dataset '{dataset_id}': {e}") from e
+
+        # Verify deletion
+        exists_after = self.dataset_exists(dataset_id)
+        print(f"DEBUG: dataset_exists after deletion: {exists_after}")
+        if exists_after:
+            raise HTTPError(f"Dataset '{dataset_id}' still exists after deletion attempt.")
+
+        if verbose:
+            print(f"✅ Dataset '{dataset_id}' successfully deleted.")
+
+        return True
+
+    def delete_metadata_item(self, dataset_id: str, key: str, verbose: bool = False) -> dict:
+        """Delete a metadata item (extra) from a dataset.
+
+        Parameters
+        ----------
+        dataset_id : str
+            The dataset name or ID.
+        key : str
+            The metadata key to delete.
+        verbose : bool, optional
+            If True, prints additional information.
+
+        Returns
+        -------
+        dict
+            The updated dataset after deletion.
+
+        Raises
+        ------
+        NotFound
+            If the dataset or metadata key does not exist.
+        HTTPError
+            For other API errors.
+
+        """
+        dataset = self.get_dataset_info(dataset_id)
+
+        extras = dataset.get("extras", [])
+        new_extras = [extra for extra in extras if extra.get("key") != key]
+
+        if len(new_extras) == len(extras):
+            raise NotFound(f"Metadata key '{key}' not found in dataset '{dataset_id}'.")
+
+        dataset["extras"] = new_extras
+        try:
+            updated_dataset = self.update_dataset(dataset)
+            if verbose:
+                print(f"✅ Metadata key '{key}' deleted from dataset '{dataset_id}'.")
+            return updated_dataset
+        except Exception as e:
+            raise HTTPError(f"Error deleting metadata key '{key}': {e}") from e

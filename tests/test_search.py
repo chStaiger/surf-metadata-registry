@@ -1,14 +1,10 @@
 import pytest
 import json
 from io import StringIO
-from surfmeta.cli_utils import (
-    handle_md_search,
-    _dataset_matches,
-    _flatten_value_for_search,
-    _normalize_extras_for_search,
-    _search_datasets,
-    _print_dataset_results,
-)
+from surfmeta.cli_handlers import handle_md_search
+from surfmeta.search_utils import print_dataset_results, _dataset_matches, search_datasets
+from surfmeta.metadata_utils import normalize_extras_for_search, _flatten_value_for_search
+
 
 # Sample mock datasets
 MOCK_DATASETS = [
@@ -54,14 +50,14 @@ def test_flatten_value_for_search_dict():
     assert "y" in result
 
 # -----------------------------
-# Tests for _normalize_extras_for_search
+# Tests for normalize_extras_for_search
 # -----------------------------
 def test_normalize_extras_for_search():
     extras = [
         {"key": "Algorithm", "value": "RandomForest"},
         {"key": "Params", "value": json.dumps({"n_estimators": 100})},
     ]
-    result = _normalize_extras_for_search(extras)
+    result = normalize_extras_for_search(extras)
     assert "algorithm" in result
     assert "randomforest" in result
     assert "params" in result
@@ -92,19 +88,19 @@ def test_dataset_matches_combined():
     assert _dataset_matches(ds, keyword="randomforest", org_filter="org2", group_filter="group1") is False
 
 # -----------------------------
-# Tests for _search_datasets
+# Tests for search_datasets
 # -----------------------------
 def test_search_datasets_keyword():
-    result = _search_datasets(MOCK_DATASETS, keyword="randomforest")
+    result = search_datasets(MOCK_DATASETS, keyword="randomforest")
     assert len(result) == 1
     assert result[0]["name"] == "dataset1"
 
 def test_search_datasets_org():
-    result = _search_datasets(MOCK_DATASETS, org="org1")
+    result = search_datasets(MOCK_DATASETS, org="org1")
     assert len(result) == 2
 
 def test_search_datasets_group():
-    result = _search_datasets(MOCK_DATASETS, group="group2")
+    result = search_datasets(MOCK_DATASETS, group="group2")
     assert len(result) == 1
     assert result[0]["name"] == "dataset3"
 
@@ -112,11 +108,11 @@ def test_search_datasets_group():
 # Tests for _print_dataset_results
 # -----------------------------
 def test_print_dataset_results(capsys):
-    _print_dataset_results(MOCK_DATASETS[:2])
+    print_dataset_results(MOCK_DATASETS[:2])
     captured = capsys.readouterr().out
     assert "Test Dataset 1" in captured
     assert "Another Dataset" in captured
-    assert "Org: org1" not in captured  # We don’t use Org label inside _print_dataset_results, it's direct
+    assert "Org: org1" not in captured  # We don’t use Org label inside print_dataset_results, it's direct
 
 # -----------------------------
 # Tests for handle_md_search

@@ -3,10 +3,7 @@ from unittest.mock import MagicMock
 from io import StringIO
 import sys
 
-from surfmeta.cli_utils import handle_md_list 
-
-# Import your functions
-# from your_module import handle_md_list, _list_all_datasets, _show_dataset_metadata
+from surfmeta.cli_handlers import handle_md_list
 
 class Args:
     """Simple container for command-line args."""
