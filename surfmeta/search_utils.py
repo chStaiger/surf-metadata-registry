@@ -1,4 +1,6 @@
+"""Search helpers."""
 from surfmeta.metadata_utils import normalize_extras_for_search
+
 
 def _dataset_matches(dataset, keyword="", org_filter="", group_filter=""):
     """Check if a dataset matches keyword, org, and group filters."""

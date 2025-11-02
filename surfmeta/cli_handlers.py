@@ -2,11 +2,12 @@
 
 import uuid
 
-from ckanapi import ValidationError
+from ckanapi import NotAuthorized, NotFound, ValidationError
 
 from surfmeta.ckan import Ckan
-from surfmeta.metadata_utils import normalize_extras_for_search, load_and_validate_flat_json
-from surfmeta.search_utils import search_datasets, print_dataset_results
+from surfmeta.metadata_utils import load_and_validate_flat_json
+from surfmeta.search_utils import print_dataset_results, search_datasets
+
 
 def user_input_meta(ckan_conn: Ckan) -> dict:
     """Retrieve metadata input through CLI with organisation and optional group selection."""
@@ -256,3 +257,30 @@ def handle_md_update(ckan_conn, args):
         print("❌ Validation error while updating dataset:", e)
     except Exception as e:
         print("❌ Failed to update dataset:", e)
+
+# Delete entry or key and its value
+
+def handle_mdentry_delete_dataset(ckan_conn, dataset, args):
+    """Delete the entire dataset."""
+    try:
+        ckan_conn.delete_dataset(dataset_id=args.uuid)
+        print(f"✅ Dataset '{dataset['name']}' deleted successfully.")
+    except NotAuthorized:
+        print(f"❌ Not authorized to delete dataset '{args.uuid}'.")
+    except NotFound:
+        print(f"❌ Dataset '{args.uuid}' not found.")
+    except Exception as e:
+        print(f"❌ Failed to delete dataset '{args.uuid}': {e}")
+
+
+def handle_mdentry_delete_key(ckan_conn, args):
+    """Delete a specific metadata key from a dataset."""
+    try:
+        ckan_conn.delete_metadata_item(dataset_id=args.uuid, key=args.key)
+        print(f"✅ Metadata key '{args.key}' deleted from dataset '{args.uuid}'.")
+    except NotAuthorized:
+        print(f"❌ Not authorized to delete metadata key '{args.key}' in dataset '{args.uuid}'.")
+    except NotFound as e:
+        print(f"❌ {e}")
+    except Exception as e:
+        print(f"❌ Failed to delete metadata key '{args.key}' in dataset '{args.uuid}': {e}")
