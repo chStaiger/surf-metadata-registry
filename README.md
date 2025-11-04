@@ -47,39 +47,30 @@ uv run surfmeta
 You should receive the help fpr the command:
 
 ```
-usage: surfmeta [-h] {ckan,create,create-meta-file,md-list,md-search} ...
+usage: surfmeta [-h] <command> [<args>]
 
-Create metadata for data on SURF infrastructure.
-
-Usage: surfmeta [subcommand] [options]
-
-Available subcommands:
-    ckan        Manage CKAN configurations
-    create      Create a new dataset only containing metadata in CKAN
-
-Example usage:
-    surfmeta ckan list
-    surfmeta ckan switch myalias
-    surfmeta ckan init
-    surfmeta ckan remove ckanurl
-    surfmeta ckan alias myalias https://demo.ckan.org
-    surfmeta ckan orgs
-    surfmeta ckan groups
-
-    surfmeta create path
-
-positional arguments:
-  {ckan,create,create-meta-file,md-list,md-search}
-    ckan                CKAN configuration commands
-    create              Create a new metadata entry interactively in CKAN
-    create-meta-file    Interactively create a JSON metadata file
-    md-list             List metadata entries from CKAN. Without arguments:
-                        show all entries (name + UUID). With <uuid>: show
-                        metadata of that entry.
-    md-search           Search CKAN datasets
+Create and manage metadata for datasets on SURF infrastructure.
 
 options:
-  -h, --help            show this help message and exit
+  -h, --help   show this help message and exit
+
+Available commands:
+  <command>    Run 'surfmeta <command> --help' for more details
+    ckan       Manage CKAN configurations and connections
+    create     Create a new metadata entry interactively in CKAN
+    create-md  Interactively create a JSON metadata file
+    list       List metadata entries from CKAN
+    search     Search CKAN datasets
+    update     Update metadata for an existing dataset
+    delete     Delete a dataset or metadata key from CKAN
+
+Examples:
+  surfmeta ckan list
+  surfmeta ckan init
+  surfmeta ckan alias demo https://demo.ckan.org
+  surfmeta create ./path/to/data
+  surfmeta update <uuid> --metafile metadata.json
+Use "surfmeta <command> --help" for more information on a command.
 ```
 
 # Usage
@@ -104,7 +95,7 @@ You will be asked to copy your token, Note, it will not be shown!
 ## Create a minimal metadata entry for a file on your computer
 When you have just started it might be that there no metadata entries for you available yet:
 ```
-surfmeta md-list
+surfmeta list
 ⚠️ No datasets found on this CKAN instance.
 ```
 
@@ -137,7 +128,7 @@ Now let us see how to create a metadata entry wioth some more information.
 In the example below we prepare the metadata entry for the whole folder `my_books`:
 
 ```
-surfmeta create-meta-file annotations_my_books.json
+surfmeta create-md annotations_my_books.json
 
 Add Prov-O metadata (leave blank to skip any field):
 prov:wasGeneratedBy: Christine
@@ -171,16 +162,17 @@ Do you want to add the dataset to a group? [y/N]:
 ✅ Dataset created successfully!
 ```
 
-## Spider and Snellius
-If you want to create some metadata for spider or snellius, please install the client on the infrastructure and use as above.
-Tje metadata will be automatically extended wirth system information that enables you to download the files and folders for which you created the metadata.
+You can also update the existing metadata of a CKAN entry with such a metadata file by using the
+function `surfmeta update <uuid> --metafile path/to/meta.json`.
+
+Note that metadata entries will only be added or changed, not deleted.
 
 ## Finding metadata entries
 
 To find and explore metadata entries we have the commands `surfmeta search` and `surfmeta list`. I can find all data which are on my local computer:
 
 ```
-surfmeta md-search -k local
+surfmeta search -k local
 Found 2 datasets:
 
 Title            UUID                                  Organization  Groups
@@ -189,10 +181,10 @@ Sherlock Holmes  1fd0e173-8873-4619-ab38-bfda5a47a8cc  book-club  analysis-data
 Book collection  d24468e0-e708-41ba-ace4-cc11cecafc15  book-club  <no groups>
 ```
 
-To further onspect the metadata of the Sherlock Holmes files use the UUID in the command `md-list`:
+To further onspect the metadata of the Sherlock Holmes files use the UUID in the command `list`:
 
 ```
-surfmeta md-list 1fd0e173-8873-4619-ab38-bfda5a47a8cc
+surfmeta list 1fd0e173-8873-4619-ab38-bfda5a47a8cc
 
 Metadata for dataset: Sherlock Holmes (UUID: 1fd0e173-8873-4619-ab38-bfda5a47a8cc)
 
@@ -207,6 +199,21 @@ User Metadata:
   checksum      : ["md5", "18bc425382bced34c158ae7e2fa3dd88"]
   location      : /Users/christine/my_books/AdventuresSherlockHolmes.txt
 ```
+
+## Delete
+You can delete whole metadata entrues or just single keys and their values. In the example below we
+remove one of the Prov-O keys and its value:
+
+```
+
+surfmeta delete d24468e0-e708-41ba-ace4-cc11cecafc15 -k prov:wasGeneratedBy
+```
+
+
+
+## Spider and Snellius
+If you want to create some metadata for spider or snellius, please install the client on the infrastructure and use as above.
+Tje metadata will be automatically extended wirth system information that enables you to download the files and folders for which you created the metadata.
 
 # Known Issues
 
