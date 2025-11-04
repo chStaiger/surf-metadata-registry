@@ -47,7 +47,7 @@ def build_parser():
   surfmeta ckan alias demo https://demo.ckan.org
   surfmeta create ./path/to/data
   surfmeta update <uuid> --metafile metadata.json
-Use "surfmeta <command> --help" for more information on a command."""
+Use "surfmeta <command> --help" for more information on a command.""",
     )
 
     subparsers = parser.add_subparsers(
@@ -55,7 +55,7 @@ Use "surfmeta <command> --help" for more information on a command."""
         dest="command",
         metavar="<command>",
         required=True,
-        help="Run 'surfmeta <command> --help' for more details"
+        help="Run 'surfmeta <command> --help' for more details",
     )
 
     _add_ckan_subcommands(subparsers)
@@ -99,6 +99,15 @@ def _add_dataset_subcommands(subparsers):
     p = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
     p.add_argument("path", type=Path, help="Path for which to create metadata")
     p.add_argument("--metafile", type=Path, help="Path to a JSON file with additional metadata")
+    p.add_argument(
+        "--remote",
+        action="store_true",
+        help=(
+            "Create a metadata for a file on a remote system."
+            " Add system information and path manually."
+            " ⚠️ No checksum check and no path-exists check will be done."
+        ),
+    )
     p.set_defaults(func=cmd_create)
 
     # create-meta-file
@@ -138,7 +147,7 @@ def _add_dataset_subcommands(subparsers):
 # -----------------------------
 # CKAN Command Functions
 # -----------------------------
-def ckan_list(args): # pylint: disable=unused-argument
+def ckan_list(args):  # pylint: disable=unused-argument
     """List all available CKAN configurations."""
     show_available(CKANCONFIG)
 
@@ -212,9 +221,16 @@ def _list_entities(list_func, include_full, entity_name):
 def cmd_create(args):
     """Create a CKAN dataset/entry."""
     ckan_conn = get_ckan_connection()
-    sys_meta = get_sys_meta()
-    if args.path.is_file():
-        meta_checksum(sys_meta, args.path.resolve())
+    if args.remote:
+        print("⚠️ WARNING: --remote chosen: skipping checksum and system metadata.")
+        print(f"Creating metadata for {str(args.path)}.")
+        system = input("Enter the system name: ")
+        sys_meta = {"system_name": system}
+        sys_meta["location"] = str(args.path)
+    else:
+        sys_meta = get_sys_meta()
+        if args.path.is_file():
+            meta_checksum(sys_meta, args.path.resolve())
 
     extras = []
     if args.metafile:
