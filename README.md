@@ -81,13 +81,13 @@ Before we start we need to configure the access toa metadata store (CKAN). Pleas
 To configure a CKAN connection you first need to create an alias:
 
 ```
-surfmeta alias your_alias https://your.ckan.url
+surfmeta ckan alias your_alias https://your.ckan.url
 ```
 
 To activate it with a token, please generate one under your CKAN user in the webinterface and then do:
 
 ```
-surfmeta init alias_or_url
+surfmeta ckan init alias_or_url
 ```
 You will be asked to copy your token, Note, it will not be shown!
 
