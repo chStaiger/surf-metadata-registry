@@ -38,18 +38,19 @@ def print_dataset_results(datasets):
     max_name_len = max(len(ds.get("name", "<no uuid>")) for ds in datasets)
     max_org_len = max(len(ds.get("organization", {}).get("name", "<no org>")) for ds in datasets)
 
-    header = f"{'Title':<{max_title_len}}  {'UUID':<{max_name_len}}  {'Organization':<{max_org_len}}  Groups"
+    header = f"{'Title':<{max_title_len}}  {'UUID':<{max_name_len}}  {'Organization':<{max_org_len}}  System"
     print(header)
     print("-" * len(header))
 
     for ds in datasets:
+        system_name = next(
+            (item["value"] for item in ds["extras"] if item["key"] == "system_name"), None)
+
         title = ds.get("title", "<no title>")
         name = ds.get("name", "<no uuid>")
         org = ds.get("organization", {}).get("name", "<no org>")
-        groups = [g.get("name", "") for g in ds.get("groups", [])]
-        group_str = ", ".join(groups) if groups else "<no groups>"
 
-        print(f"{title:<{max_title_len}}  {name:<{max_name_len}}  {org:<{max_org_len}}  {group_str}")
+        print(f"{title:<{max_title_len}}  {name:<{max_name_len}}  {org:<{max_org_len}}  {system_name}")
 
 
 def search_datasets(datasets, keyword=None, org=None, group=None):
