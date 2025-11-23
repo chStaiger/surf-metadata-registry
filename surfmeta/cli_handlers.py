@@ -77,15 +77,10 @@ def user_input_meta(ckan_conn: Ckan) -> dict:
 
 def create_dataset(ckan_conn: Ckan, meta: dict):
     """Create the dataset."""
-    try:
-        response = ckan_conn.create_dataset(meta)
-        uuid_value = next((item["value"] for item in meta["extras"] if item["key"] == "uuid"), None)
-        print(f"🆔 UUID: {uuid_value}")
-        print(f"🌐 Name: {response['title']}")
-    except ValidationError as e:
-        print("❌ Failed to create dataset. Validation error:", e)
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        print("❌ Failed to create dataset:", e)
+    response = ckan_conn.create_dataset(meta)
+    uuid_value = next((item["value"] for item in meta["extras"] if item["key"] == "uuid"), None)
+    print(f"🆔 UUID: {uuid_value}")
+    print(f"🌐 Name: {response['title']}")
 
 
 # List utils
