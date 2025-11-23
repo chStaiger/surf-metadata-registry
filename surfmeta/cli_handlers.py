@@ -183,11 +183,12 @@ def _print_dataset_info(dataset, system_meta, user_meta, args):
 
 def handle_md_search(ckan_conn, args):
     """Search for datasets in CKAN and print results."""
-    keyword = args.keyword or ""
+    keywords = args.keyword or []
     org = args.org or ""
     group = args.group or ""
+    system = args.system or ""
 
-    if not keyword and not org and not group:
+    if not keywords and not org and not group and not system:
         print("⚠️ Please provide at least one search criterion (keyword, org, or group).")
         return
 
@@ -196,7 +197,7 @@ def handle_md_search(ckan_conn, args):
         print("⚠️ No datasets found on this CKAN instance.")
         return
 
-    results = search_datasets(datasets, keyword, org, group)
+    results = search_datasets(datasets, keywords, org, group, system)
     if not results:
         print("⚠️ No datasets found matching the given criteria.")
         return

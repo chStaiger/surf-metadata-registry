@@ -2,26 +2,35 @@
 from surfmeta.metadata_utils import normalize_extras_for_search
 
 
-def _dataset_matches(dataset, keyword="", org_filter="", group_filter=""):
+def _dataset_matches(dataset, keywords=[], org_filter="", group_filter="", system_filter=""):
     """Check if a dataset matches keyword, org, and group filters."""
-    keyword = (keyword or "").lower()
+    keywords = [k.lower() for k in keywords] or []
     org_filter = (org_filter or "").lower()
     group_filter = (group_filter or "").lower()
+    system_filter = (system_filter or "").lower()
 
     title = dataset.get("title", "")
     name = dataset.get("name", "")
     org = dataset.get("organization", {}).get("name", "")
     groups = [g.get("name", "") for g in dataset.get("groups", [])]
     extras = dataset.get("extras", [])
-
+    if extras:
+        system = [item["value"] for item in extras if item["key"] == "system_name"]
+    else:
+        system = None
     # Combine title, name, and flattened extras for keyword search
     combined_text = " ".join([title, name] + normalize_extras_for_search(extras))
 
-    if keyword and keyword not in combined_text:
+    if keywords and not any(keyword in combined_text for keyword in keywords):
         return False
     if org_filter and org_filter != org.lower():
         return False
     if group_filter and group_filter not in [g.lower() for g in groups]:
+        return False
+    # local data does not have a system name, system can be None and []
+    if system_filter and not system and system_filter not in ["local", "localhost"]:
+        return False
+    if system_filter and system and system_filter != system[0].lower():
         return False
 
     return True
@@ -44,7 +53,7 @@ def print_dataset_results(datasets):
 
     for ds in datasets:
         system_name = next(
-            (item["value"] for item in ds["extras"] if item["key"] == "system_name"), None)
+            (item["value"] for item in ds["extras"] if item["key"] == "system_name"), "local or not defined")
 
         title = ds.get("title", "<no title>")
         name = ds.get("name", "<no uuid>")
@@ -53,6 +62,6 @@ def print_dataset_results(datasets):
         print(f"{title:<{max_title_len}}  {name:<{max_name_len}}  {org:<{max_org_len}}  {system_name}")
 
 
-def search_datasets(datasets, keyword=None, org=None, group=None):
+def search_datasets(datasets, keyword=None, org=None, group=None, system=None):
     """Return a list of datasets matching given filters."""
-    return [ds for ds in datasets if _dataset_matches(ds, keyword, org, group)]
+    return [ds for ds in datasets if _dataset_matches(ds, keyword, org, group, system)]

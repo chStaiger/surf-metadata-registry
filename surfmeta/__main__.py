@@ -125,9 +125,17 @@ def _add_dataset_subcommands(subparsers):
 
     # md-search
     p = subparsers.add_parser("search", help="Search CKAN datasets")
-    p.add_argument("--keyword", "-k", help="Keyword to search in title, name, or metadata")
+    p.add_argument(
+        "--keyword", "-k", action="append",
+        help=(
+            "Keyword(s) to search in title, name, or metadata.\n"
+            "Example: --keyword 'data' --keyword 'science'"
+        )
+    )
+
     p.add_argument("--org", "-o", help="Filter by organization")
     p.add_argument("--group", "-g", help="Filter by group")
+    p.add_argument("--system", "-s", help="Filter by system")
     p.set_defaults(func=cmd_md_search)
 
     # md-update
@@ -306,6 +314,7 @@ def _run_handler(handler, args):
     try:
         handler(get_ckan_connection(), args)
     except Exception as e:
+        raise Exception from e
         print(f"❌ Error: {e}")
 
 
