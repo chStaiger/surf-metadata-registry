@@ -6,7 +6,7 @@ import sys
 from getpass import getpass
 from pathlib import Path
 
-from ckanapi import NotAuthorized, NotFound
+from ckanapi import NotAuthorized, NotFound, ValidationError
 
 from surfmeta.ckan import Ckan
 from surfmeta.ckan_conf import CKANConf, show_available
@@ -125,9 +125,18 @@ def _add_dataset_subcommands(subparsers):
 
     # md-search
     p = subparsers.add_parser("search", help="Search CKAN datasets")
-    p.add_argument("--keyword", "-k", help="Keyword to search in title, name, or metadata")
+    p.add_argument(
+        "--keyword",
+        "-k",
+        action="append",
+        help=(
+            "Keyword(s) to search in title, name, or metadata.\nExample: --keyword 'data' --keyword 'science'"
+        ),
+    )
+
     p.add_argument("--org", "-o", help="Filter by organization")
     p.add_argument("--group", "-g", help="Filter by group")
+    p.add_argument("--system", "-s", help="Filter by system")
     p.set_defaults(func=cmd_md_search)
 
     # md-update
@@ -245,9 +254,10 @@ def cmd_create(args):
     try:
         create_dataset(ckan_conn, ckan_metadata)
         print("✅ Dataset created successfully!")
-    except Exception as e:
-        print(f"❌ Failed to create dataset: {e}")
-
+    except ValidationError as e:
+        print("❌ Failed to create dataset. Validation error:", e)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print("❌ Failed to create dataset:", e)
 
 def cmd_create_meta_file(args):
     """Create a CKAN compatible metadata file."""
@@ -306,6 +316,7 @@ def _run_handler(handler, args):
     try:
         handler(get_ckan_connection(), args)
     except Exception as e:
+        #raise Exception from e
         print(f"❌ Error: {e}")
 
 

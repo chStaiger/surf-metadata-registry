@@ -12,6 +12,7 @@ def local_meta():
     """Create standard metadata for local data."""
     meta = {}
     meta["server"] = "local"
+    meta["system_name"] = "local"
     return meta
 
 

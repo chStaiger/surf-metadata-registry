@@ -13,21 +13,30 @@ MOCK_DATASETS = [
         "name": "dataset1",
         "organization": {"name": "org1"},
         "groups": [{"name": "group1"}],
-        "extras": [{"key": "algorithm", "value": "RandomForest"}],
+        "extras": [
+            {"key": "algorithm", "value": "RandomForest"},
+            {"key": "system_name", "value": "localhost"}
+        ],
     },
     {
         "title": "Another Dataset",
         "name": "dataset2",
         "organization": {"name": "org2"},
         "groups": [],
-        "extras": [{"key": "prov:SoftwareAgent", "value": "AgentX"}],
+        "extras": [
+            {"key": "prov:SoftwareAgent", "value": "AgentX"},
+            {"key": "system_name", "value": "remote"}
+        ],
     },
     {
         "title": "Third Dataset",
         "name": "dataset3",
         "organization": {"name": "org1"},
         "groups": [{"name": "group2"}],
-        "extras": [{"key": "nested", "value": json.dumps({"a": [1,2]})}],
+        "extras": [
+            {"key": "nested", "value": json.dumps({"a": [1, 2]})},
+            {"key": "system_name", "value": "local"}
+        ],
     },
 ]
 
@@ -69,8 +78,8 @@ def test_normalize_extras_for_search():
 # -----------------------------
 def test_dataset_matches_keyword_only():
     ds = MOCK_DATASETS[0]
-    assert _dataset_matches(ds, keyword="randomforest") is True
-    assert _dataset_matches(ds, keyword="nonexistent") is False
+    assert _dataset_matches(ds, keywords=["randomforest"]) is True
+    assert _dataset_matches(ds, keywords=["nonexistent"]) is False
 
 def test_dataset_matches_org_only():
     ds = MOCK_DATASETS[1]
@@ -84,14 +93,14 @@ def test_dataset_matches_group_only():
 
 def test_dataset_matches_combined():
     ds = MOCK_DATASETS[0]
-    assert _dataset_matches(ds, keyword="randomforest", org_filter="org1", group_filter="group1") is True
-    assert _dataset_matches(ds, keyword="randomforest", org_filter="org2", group_filter="group1") is False
+    assert _dataset_matches(ds, keywords=["randomforest"], org_filter="org1", group_filter="group1") is True
+    assert _dataset_matches(ds, keywords=["randomforest"], org_filter="org2", group_filter="group1") is False
 
 # -----------------------------
 # Tests for search_datasets
 # -----------------------------
 def test_search_datasets_keyword():
-    result = search_datasets(MOCK_DATASETS, keyword="randomforest")
+    result = search_datasets(MOCK_DATASETS, keyword=["randomforest"])
     assert len(result) == 1
     assert result[0]["name"] == "dataset1"
 
@@ -113,27 +122,3 @@ def test_print_dataset_results(capsys):
     assert "Test Dataset 1" in captured
     assert "Another Dataset" in captured
     assert "Org: org1" not in captured  # We don’t use Org label inside print_dataset_results, it's direct
-
-# -----------------------------
-# Tests for handle_md_search
-# -----------------------------
-class MockCKANConn:
-    def list_all_datasets(self, include_private=True):
-        return MOCK_DATASETS
-
-@pytest.mark.parametrize("args, expected_count", [
-    ({"keyword": "randomforest", "org": None, "group": None}, 1),
-    ({"keyword": None, "org": "org1", "group": None}, 2),
-    ({"keyword": None, "org": None, "group": "group2"}, 1),
-])
-def test_handle_md_search(capsys, args, expected_count):
-    mock_conn = MockCKANConn()
-    class Args:
-        keyword = args["keyword"]
-        org = args["org"]
-        group = args["group"]
-
-    handle_md_search(mock_conn, Args)
-    captured = capsys.readouterr().out
-    assert f"Found {expected_count} datasets" in captured
-

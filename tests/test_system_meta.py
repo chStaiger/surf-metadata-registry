@@ -15,7 +15,7 @@ def test_get_system_info(monkeypatch):
 
 def test_local_meta_and_snellius_meta():
     """Test that local_meta and snellius_meta return dicts with expected content."""
-    assert {'server': 'local'} == local_meta()
+    assert {'server': 'local', 'system_name': 'local'} == local_meta()
     assert {'system_name': 'snellius', 'server': 'snellius.surf.nl', 'protocols': ['ssh', 'rsync']} == snellius_meta()
 
 

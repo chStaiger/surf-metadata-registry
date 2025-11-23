@@ -77,15 +77,10 @@ def user_input_meta(ckan_conn: Ckan) -> dict:
 
 def create_dataset(ckan_conn: Ckan, meta: dict):
     """Create the dataset."""
-    try:
-        response = ckan_conn.create_dataset(meta)
-        uuid_value = next((item["value"] for item in meta["extras"] if item["key"] == "uuid"), None)
-        print(f"🆔 UUID: {uuid_value}")
-        print(f"🌐 Name: {response['title']}")
-    except ValidationError as e:
-        print("❌ Failed to create dataset. Validation error:", e)
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        print("❌ Failed to create dataset:", e)
+    response = ckan_conn.create_dataset(meta)
+    uuid_value = next((item["value"] for item in meta["extras"] if item["key"] == "uuid"), None)
+    print(f"🆔 UUID: {uuid_value}")
+    print(f"🌐 Name: {response['title']}")
 
 
 # List utils
@@ -183,11 +178,12 @@ def _print_dataset_info(dataset, system_meta, user_meta, args):
 
 def handle_md_search(ckan_conn, args):
     """Search for datasets in CKAN and print results."""
-    keyword = args.keyword or ""
+    keywords = args.keyword or []
     org = args.org or ""
     group = args.group or ""
+    system = args.system or ""
 
-    if not keyword and not org and not group:
+    if not keywords and not org and not group and not system:
         print("⚠️ Please provide at least one search criterion (keyword, org, or group).")
         return
 
@@ -196,7 +192,7 @@ def handle_md_search(ckan_conn, args):
         print("⚠️ No datasets found on this CKAN instance.")
         return
 
-    results = search_datasets(datasets, keyword, org, group)
+    results = search_datasets(datasets, keywords, org, group, system)
     if not results:
         print("⚠️ No datasets found matching the given criteria.")
         return
@@ -258,7 +254,9 @@ def handle_md_update(ckan_conn, args):
     except Exception as e:
         print("❌ Failed to update dataset:", e)
 
+
 # Delete entry or key and its value
+
 
 def handle_mdentry_delete_dataset(ckan_conn, dataset, args):
     """Delete the entire dataset."""
