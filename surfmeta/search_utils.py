@@ -1,4 +1,5 @@
 """Search helpers."""
+
 from surfmeta.metadata_utils import normalize_extras_for_search
 
 
@@ -53,7 +54,8 @@ def print_dataset_results(datasets):
 
     for ds in datasets:
         system_name = next(
-            (item["value"] for item in ds["extras"] if item["key"] == "system_name"), "local or not defined")
+            (item["value"] for item in ds["extras"] if item["key"] == "system_name"), "local or not defined"
+        )
 
         title = ds.get("title", "<no title>")
         name = ds.get("name", "<no uuid>")

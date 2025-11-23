@@ -126,11 +126,12 @@ def _add_dataset_subcommands(subparsers):
     # md-search
     p = subparsers.add_parser("search", help="Search CKAN datasets")
     p.add_argument(
-        "--keyword", "-k", action="append",
+        "--keyword",
+        "-k",
+        action="append",
         help=(
-            "Keyword(s) to search in title, name, or metadata.\n"
-            "Example: --keyword 'data' --keyword 'science'"
-        )
+            "Keyword(s) to search in title, name, or metadata.\nExample: --keyword 'data' --keyword 'science'"
+        ),
     )
 
     p.add_argument("--org", "-o", help="Filter by organization")
