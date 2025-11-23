@@ -5,7 +5,7 @@ from surfmeta.metadata_utils import normalize_extras_for_search
 
 def _dataset_matches(dataset, keywords=None, org_filter="", group_filter="", system_filter=""):
     """Check if a dataset matches keyword, org, and group filters."""
-    keywords = [k.lower() for k in keywords] or []
+    keywords = [k.lower() for k in keywords] if keywords else []
     org_filter = (org_filter or "").lower()
     group_filter = (group_filter or "").lower()
     system_filter = (system_filter or "").lower()
@@ -16,7 +16,7 @@ def _dataset_matches(dataset, keywords=None, org_filter="", group_filter="", sys
     groups = [g.get("name", "") for g in dataset.get("groups", [])]
     extras = dataset.get("extras", [])
     if extras:
-        system = [item["value"] for item in extras if item["key"] == "system_name"]
+        system = next((item["value"] for item in extras if item["key"] == "system_name"), None)
     else:
         system = None
     # Combine title, name, and flattened extras for keyword search
@@ -31,7 +31,7 @@ def _dataset_matches(dataset, keywords=None, org_filter="", group_filter="", sys
     # local data does not have a system name, system can be None and []
     if system_filter and not system and system_filter not in ["local", "localhost"]:
         return False
-    if system_filter and system and system_filter != system[0].lower():
+    if system_filter and system and system_filter != system.lower():
         return False
 
     return True
