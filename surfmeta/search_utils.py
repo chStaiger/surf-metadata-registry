@@ -3,7 +3,7 @@
 from surfmeta.metadata_utils import normalize_extras_for_search
 
 
-def _dataset_matches(dataset, keywords=[], org_filter="", group_filter="", system_filter=""):
+def _dataset_matches(dataset, keywords=None, org_filter="", group_filter="", system_filter=""):
     """Check if a dataset matches keyword, org, and group filters."""
     keywords = [k.lower() for k in keywords] or []
     org_filter = (org_filter or "").lower()

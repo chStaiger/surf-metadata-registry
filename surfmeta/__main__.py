@@ -315,7 +315,7 @@ def _run_handler(handler, args):
     try:
         handler(get_ckan_connection(), args)
     except Exception as e:
-        raise Exception from e
+        #raise Exception from e
         print(f"❌ Error: {e}")
 
 
