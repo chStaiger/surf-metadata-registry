@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import sys
 from getpass import getpass
 from pathlib import Path
@@ -26,7 +27,7 @@ from surfmeta.metadata_utils import (
     merge_ckan_metadata,
 )
 from surfmeta.system_metadata import meta_checksum
-from surfmeta.utils import get_ckan_connection
+from surfmeta.utils import build_transfer_commands, get_ckan_connection
 
 CKANCONFIG = CKANConf()
 
@@ -151,6 +152,25 @@ def _add_dataset_subcommands(subparsers):
     p.add_argument("--yes", action="store_true", help="Confirm deletion without prompt")
     p.add_argument("-k", "--key", help="Delete a specific metadata key instead of the entire dataset")
     p.set_defaults(func=cmd_md_delete)
+
+    # get
+    p = subparsers.add_parser("get", help="Information how to retrieve data from the systems.")
+    p.add_argument("uuid", help="UUID or dataset name")
+    # Optional username
+    p.add_argument(
+        "-u", "--username",
+        help="Username for remote systems (optional)",
+        required=False,
+        default=None
+    )
+    # Optional destination directory
+    p.add_argument(
+        "-d", "--dest",
+        help="Destination directory for downloaded files (optional)",
+        required=False,
+        default="."   # Current directory
+    )
+    p.set_defaults(func=cmd_get)
 
 
 # -----------------------------
@@ -307,6 +327,37 @@ def cmd_md_delete(args):
     else:
         handle_mdentry_delete_dataset(ckan_conn, dataset, args)
 
+
+def cmd_get(args):
+    """Build the commands to get the data."""
+    ckan_conn = get_ckan_connection()
+    try:
+        dataset = ckan_conn.get_dataset_info(args.uuid)
+    except NotFound:
+        print(f"❌ Dataset '{args.uuid}' not found.")
+        return
+    except NotAuthorized:
+        print(f"❌ Not authorized to access dataset '{args.uuid}'.")
+        return
+    except Exception as e:
+        print(f"❌ Error fetching dataset '{args.uuid}': {e}")
+        return
+
+    # Retrieve metadata of dataset by args.uuid
+    commands = build_transfer_commands(dataset, args.username, args.dest)
+
+    title = dataset.get("title", dataset.get("name", args.uuid))
+
+    print(f"\n📦 Dataset: {title}")
+    print(f"📁 Destination: {os.path.abspath(args.dest)}\n")
+
+    print("Available transfer commands:\n")
+
+    for method, cmd in commands.items():
+        method_pretty = method.upper().replace("_", " ")
+
+        print(f"  • {method_pretty}:")
+        print(f"      {cmd}\n")
 
 # -----------------------------
 # Helper Functions
