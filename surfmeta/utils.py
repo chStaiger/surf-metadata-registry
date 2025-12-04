@@ -153,14 +153,14 @@ def build_transfer_commands(dataset, username=None, dest="."):
     if "webdav" in protocols:
         url = location
 
-        # Curl
-        commands["webdav_curl"] = (
-            f'curl -L -u {username_display} -O "{url}"'
-        )
+        # Extract filename from URL
+        file_name = os.path.basename(url)
+        dest_path = os.path.join(dest, file_name)
 
-        # Wget
-        commands["webdav_wget"] = (
-            f'wget --user={username_display} --ask-password "{url}"'
-        )
+        # Curl: download to destination path
+        commands["webdav_curl"] = f'curl -L -u {username_display} -o "{dest_path}" "{url}"'
+
+        # Wget: download to destination path
+        commands["webdav_wget"] = f'wget --user={username_display} --ask-password -O "{dest_path}" "{url}"'
 
     return commands

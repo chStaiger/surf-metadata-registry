@@ -243,3 +243,44 @@ uv run surfmeta
 ```
 
 All `surfmeta` commands need to be run through `uv run`.
+
+## Example workflow
+Once you described your data on different storage systems with this commandline interface, you can search for your data and retrieve it again when needed. Below we show a little workflow in which we assume that data has been labeled with `ProjectID` is `bookanalysis`.
+
+We search for all data carrying the word `bookanalysis`:
+
+```
+surfmeta search -k bookanaly
+sis
+Found 3 datasets:
+
+Title                   UUID                                  Organization  System
+----------------------------------------------------------------------------------
+ThroughTheLookingGlass  7658e0fc-32d0-4d48-840f-90930343d259  book-club  snellius
+AliceInWonderland       cf3c9c5f-941c-4820-8434-184d3d6f321d  book-club  spider
+TwentyThousandLeagues   df77bdac-a3b9-41b6-9396-71f4d80de5af  book-club  dcache
+```
+
+Instead of using the `list`command and figure out how to retrieve the data, we can use the `get` command. We can also enter our username on the system in question and set a download location:
+
+```
+surfmeta get 7658e0fc-32d0-4d48-840f-90930343d259 --username cstaiger2 --dest ~/Downloads
+
+📦 Dataset: ThroughTheLookingGlass
+📁 Destination: /Users/christine/Downloads
+
+Available transfer commands:
+
+  • SCP:
+      scp cstaiger2@snellius.surf.nl:/gpfs/home5/cstaiger2/ThroughTheLookingGlass.txt /Users/christine/Downloads
+
+  • RSYNC:
+      rsync -avz cstaiger2@snellius.surf.nl:/gpfs/home5/cstaiger2/ThroughTheLookingGlass.txt /Users/christine/Downloads
+```
+
+Now we can copy paste the command and retrieve the data:
+
+```
+scp cstaiger2@snellius.surf.nl:/gpfs/home5/cstaiger2/ThroughTheLookingGlass.txt /Users/christine/Downloads
+ThroughTheLookingGlass.txt            100%  164KB   1.7MB/s   00:00
+```
