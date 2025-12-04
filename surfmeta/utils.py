@@ -1,6 +1,8 @@
 """System and other utils."""
 
 import hashlib
+import json
+import os
 import platform
 import subprocess
 import sys
@@ -89,3 +91,76 @@ def calculate_remote_checksum(host: str, username: str, file_path: Path, algorit
     # Parse checksum (first token in output)
     checksum = result.stdout.strip().split()[0]
     return checksum
+
+def build_transfer_commands(dataset, username=None, dest="."):
+    """Build download commands (scp, rsync, webdav) based on dataset metadata.
+
+    Also returns {'local': 'No download'} for local datasets.
+    If username is None, '<username>' is inserted in commands.
+    """
+    # Convert extras to a dict
+    extras = {item["key"]: item["value"] for item in dataset.get("extras", [])}
+
+    server = extras.get("server")
+    location = extras.get("location")
+
+    # Read protocol information (protocols list or single protocol)
+    protocols_raw = extras.get("protocols") or extras.get("protocol") or "[]"
+
+    # Parse protocols
+    protocols = []
+    if isinstance(protocols_raw, str):
+        try:
+            parsed = json.loads(protocols_raw)
+            protocols = parsed if isinstance(parsed, list) else [parsed]
+        except json.JSONDecodeError:
+            protocols = [protocols_raw]
+    elif isinstance(protocols_raw, list):
+        protocols = protocols_raw
+
+    # --------------------------------------
+    # Detect LOCAL dataset
+    # --------------------------------------
+    if server == "local" or not protocols:
+        return {"local": "No download"}
+
+    # Replace missing username
+    username_display = username if username else "<username>"
+
+    commands = {}
+
+    # Normalize remote filesystem paths
+    if location and not location.startswith("http"):
+        norm_path = os.path.normpath(location)
+    else:
+        norm_path = location
+
+    # --------------------------------------
+    # SSH / SCP
+    # --------------------------------------
+    if "ssh" in protocols or "scp" in protocols:
+        commands["scp"] = f"scp {username_display}@{server}:{norm_path} {dest}"
+
+    # --------------------------------------
+    # rsync
+    # --------------------------------------
+    if "rsync" in protocols:
+        commands["rsync"] = f"rsync -avz {username_display}@{server}:{norm_path} {dest}"
+
+    # --------------------------------------
+    # WebDAV
+    # --------------------------------------
+    if "webdav" in protocols:
+        url = location
+
+        # Extract filename from URL
+        file_name = os.path.basename(url)
+        dest_path = os.path.join(dest, file_name)
+
+        # Curl: download to destination path
+        commands["webdav_curl"] = f'curl -L -u {username_display} -o "{dest_path}" "{url}"'
+
+        # Wget: download to destination path
+        commands["webdav_wget"] = f'wget --user={username_display} --ask-password -O "{dest_path}" "{url}"'
+
+    return commands
