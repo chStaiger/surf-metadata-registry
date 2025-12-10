@@ -217,7 +217,7 @@ Tje metadata will be automatically extended wirth system information that enable
 
 ## Monitoring of registered data
 
-We provide a manual and an example workflow [here](Monitoring_on_dCache.md)
+We provide a manual and an example workflow [here](Monitoring_on_dCache.md).
 
 # Known Issues
 
