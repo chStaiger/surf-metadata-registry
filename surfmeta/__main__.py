@@ -28,6 +28,7 @@ from surfmeta.metadata_utils import (
 )
 from surfmeta.system_metadata import meta_checksum
 from surfmeta.utils import build_transfer_commands, get_ckan_connection
+from surfmeta.dcache_utils import dcache_auth, dcache_label, dcache_checksum, dcache_listen
 
 CKANCONFIG = CKANConf()
 
@@ -61,6 +62,7 @@ Use "surfmeta <command> --help" for more information on a command.""",
 
     _add_ckan_subcommands(subparsers)
     _add_dataset_subcommands(subparsers)
+    _add_dcache_subcommands(subparsers)
 
     return parser
 
@@ -92,6 +94,112 @@ def _add_ckan_subcommands(subparsers):
         p.set_defaults(func=func)
 
 
+# ---------------------------------
+# dCache commands to listen to data
+# ---------------------------------
+def _add_dcache_subcommands(subparsers):
+    """Register dcache command and its subcommands."""
+    dcache_parser = subparsers.add_parser(
+        "dcache",
+        help="Commands to monitor a dCache folder and registered files.",
+    )
+
+    dcache_subparsers = dcache_parser.add_subparsers(
+        dest="dcache_command",
+        metavar="<dcache-command>",
+        title="dCache commands",
+        required=True,
+    )
+
+    # dcache auth
+    p = dcache_subparsers.add_parser(
+        "auth",
+        help="Authenticate to dcache",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="""
+    Authenticate to dcache using one of the supported methods.
+
+    Methods:
+
+      --macaroon <file>   Authenticate using a macaroon file.
+
+          You can create a macaroon with the following command:
+
+          get-macaroon \\
+            --url https://<server>/<path_to_folder> \\
+            --duration P7D \\
+            --user <username> \\
+            --permissions DOWNLOAD,UPLOAD,DELETE,MANAGE,LIST,READ_METADATA,UPDATE_METADATA,STAGE \\
+            --output rclone \\
+            mytoken
+
+      --netrc <file>      Authenticate using a netrc file.
+
+          Create a .netrc file with the following format:
+
+          machine <dcache server>
+          login <username>
+          password <password>
+
+    Notes:
+      - Only one method can be used at a time (mutually exclusive)
+      - Both methods require 'ada' and 'get-macaroon' to be installed and accessible from your PATH
+    """,
+    )
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("--macaroon", type=Path, help="Path to a macaroon file")
+    group.add_argument("--netrc", type=Path, help="Path to a netrc file")
+    p.set_defaults(func=cmd_dcache_auth)
+
+    # dcache add label
+    p = dcache_subparsers.add_parser(
+        "addlabel",
+        help="Add a label to a file or folder on dCache"
+    )
+    p.add_argument(
+        "dcache_path",
+        help="Path on dCache to label (e.g., /pnfs/.../file)"
+    )
+    p.add_argument(
+        "label",
+        nargs="?",
+        default="test-ckan",
+        help="Label to add to the file/folder (default: test-ckan)"
+    )
+    p.set_defaults(func=cmd_dcache_label)
+
+    # dcache checksum
+    p = dcache_subparsers.add_parser(
+        "checksum",
+        help="Get checksum."
+    )
+    p.add_argument(
+        "dcache_path",
+        help="Path on dCache to label (e.g., /pnfs/.../file)"
+    )
+    p.set_defaults(func=cmd_dcache_checksum)
+
+    # dcache listen
+    p = dcache_subparsers.add_parser(
+        "listen",
+        help="Start listening for dCache events on a folder"
+    )
+    p.add_argument(
+        "dcache_path",
+        help="Path on dCache to listen for events"
+    )
+    p.add_argument(
+        "--channel",
+        default="tokenchannel",
+        help="Name of the event channel (default: tokenchannel)"
+    )
+    p.set_defaults(func=cmd_dcache_listen)
+
+    p = dcache_subparsers.add_parser(
+        "ada-help",
+        help = "Some useful ada examples."
+    )
+    p.set_defaults(func=cmd_ada_help)
 # -----------------------------
 # Dataset Subcommand Registration
 # -----------------------------
@@ -158,17 +266,15 @@ def _add_dataset_subcommands(subparsers):
     p.add_argument("uuid", help="UUID or dataset name")
     # Optional username
     p.add_argument(
-        "-u", "--username",
-        help="Username for remote systems (optional)",
-        required=False,
-        default=None
+        "-u", "--username", help="Username for remote systems (optional)", required=False, default=None
     )
     # Optional destination directory
     p.add_argument(
-        "-d", "--dest",
+        "-d",
+        "--dest",
         help="Destination directory for downloaded files (optional)",
         required=False,
-        default="."   # Current directory
+        default=".",  # Current directory
     )
     p.set_defaults(func=cmd_get)
 
@@ -279,6 +385,7 @@ def cmd_create(args):
     except Exception as e:  # pylint: disable=broad-exception-caught
         print("❌ Failed to create dataset:", e)
 
+
 def cmd_create_meta_file(args):
     """Create a CKAN compatible metadata file."""
     prov_meta, user_meta = input_metadata_extras()
@@ -359,6 +466,59 @@ def cmd_get(args):
         print(f"  • {method_pretty}:")
         print(f"      {cmd}\n")
 
+
+# -----------------------------
+# dCache functions
+# ------------------------------
+
+
+def cmd_dcache_auth(args):
+    if args.macaroon:
+        dcache_auth("macaroon", args.macaroon)
+    elif args.netrc:
+        dcache_auth("netrc", args.netrc)
+
+def cmd_dcache_label(args):
+    if not getattr(args, "dcache_path", None):
+        print("❌ dCache path is required.")
+        sys.exit(1)
+    label = getattr(args, "label", "test-ckan") or "test-ckan"
+    dcache_label(args.dcache_path, label)
+
+def cmd_dcache_checksum(args):
+    if not getattr(args, "dcache_path", None):
+        print("❌ dCache path is required.")
+        sys.exit(1)
+    dcache_checksum(args.dcache_path)
+
+
+def cmd_dcache_listen(args):
+    dcache_path = getattr(args, "dcache_path", None)
+    if not dcache_path:
+        print("❌ dCache path is required to listen for events.")
+        sys.exit(1)
+
+    channel = getattr(args, "channel", "tokenchannel")  # default channel
+    dcache_listen(Path(dcache_path), channel=channel)
+
+def cmd_ada_help(args=None):
+    """Print some useful ADA examples."""
+    examples = [
+        {
+            "description": "Remove a channel / listener",
+            "command": "ada --tokenfile test-macaroon-token.conf --delete-channel mychannel"
+        },
+        {
+            "description": "List all channels",
+            "command": "ada --tokenfile test-macaroon-token.conf --channels"
+        }
+    ]
+
+    print("\n💡 Useful ADA examples:\n")
+    for ex in examples:
+        print(f"🔹 {ex['description']}:")
+        print(f"    {ex['command']}\n")
+
 # -----------------------------
 # Helper Functions
 # -----------------------------
@@ -367,7 +527,7 @@ def _run_handler(handler, args):
     try:
         handler(get_ckan_connection(), args)
     except Exception as e:
-        #raise Exception from e
+        # raise Exception from e
         print(f"❌ Error: {e}")
 
 
