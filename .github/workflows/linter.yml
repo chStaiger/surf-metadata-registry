@@ -11,6 +11,7 @@ on:
       - develop
     paths-ignore:
       - 'README.md'
+      - '**.md'
       - 'data/**'
       - 'html/**'
       - 'configs/**'
@@ -18,6 +19,7 @@ on:
   pull_request:
     paths-ignore:
       - 'README.md'
+      - '**.md'
 
 jobs:
   build:
