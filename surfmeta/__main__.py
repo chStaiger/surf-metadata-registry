@@ -497,9 +497,10 @@ def cmd_dcache_listen(args):
     if not dcache_path:
         print("❌ dCache path is required to listen for events.")
         sys.exit(1)
+    ckan_conn = get_ckan_connection()
 
     channel = getattr(args, "channel", "tokenchannel")  # default channel
-    dcache_listen(Path(dcache_path), channel=channel)
+    dcache_listen(Path(dcache_path), ckan_conn, channel=channel)
 
 def cmd_ada_help(args=None):
     """Print some useful ADA examples."""
@@ -511,6 +512,15 @@ def cmd_ada_help(args=None):
         {
             "description": "List all channels",
             "command": "ada --tokenfile test-macaroon-token.conf --channels"
+        }
+        ,
+        {
+            "description": "Remove file",
+            "command": "ada --tokenfile  test-macaroon-token.conf --delete <filename>"
+        },
+        {
+            "description": "List current working directory",
+            "command": "ada --tokenfile  test-macaroon-token.conf --list ."
         }
     ]
 

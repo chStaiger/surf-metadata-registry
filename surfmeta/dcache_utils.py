@@ -14,6 +14,7 @@ import sys
 import json
 from pathlib import Path
 from surfmeta.ckan_conf import CKANConf
+from surfmeta.ckan import Ckan
 
 # ----------------------------------------------------------------------
 # Tool Requirements
@@ -111,7 +112,7 @@ def _dcache_get_stat(dcache_path: Path) -> dict:
     """Retrieve dCache stat information."""
     try:
         out = _run_dcache_cmd(["--stat", str(dcache_path)])
-        return out
+        return json.loads(out)
     except RuntimeError as exc:
         raise RuntimeError from exc
 
@@ -125,12 +126,7 @@ def dcache_checksum(dcache_path: Path) -> tuple[str, str]:
             print(f"{algo}, {checksum}")
 
 
-import subprocess
-from pathlib import Path
-from surfmeta.ckan_conf import CKANConf
-from .dcache_utils import require_dcache_tools
-
-def dcache_listen(dcache_path: Path, channel: str = "tokenchannel"):
+def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchannel"):
     """
     Start a dCache event listener on a given folder.
 
@@ -139,6 +135,7 @@ def dcache_listen(dcache_path: Path, channel: str = "tokenchannel"):
         channel (str): Name of the event channel (default: "tokenchannel")
     """
     require_dcache_tools()
+    listen_cues = ["IN_DELETE", "IN_MOVED_FROM", "IN_MOVED_TO"]
 
     conf = CKANConf()
     auth_type, auth_file = conf.get_dcache_auth()
@@ -158,28 +155,58 @@ def dcache_listen(dcache_path: Path, channel: str = "tokenchannel"):
 
     print(f"🎧 Listening to dCache events on '{dcache_path}' (channel: {channel}) …")
 
+    previous_move = None  # Store the last IN_MOVED_FROM path
+
     try:
-        # Run listener in the foreground; Ctrl+C stops it
-        subprocess.run(cmd, check=True)
+        # Run the listener and capture output line by line
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as proc:
+            for line in proc.stdout:
+                line = line.strip()
+                if not line:
+                    continue
+
+                # Extract the path from the line
+                if any(cue in line for cue in listen_cues):
+                    event_path = parse_inotify_path(line)
+                    print(event_path)
+
+                if "IN_MOVED_FROM" in line:
+                    previous_move = event_path
+                    #print(f"🟡 Detected move from: {previous_move}")
+                elif "IN_MOVED_TO" in line:
+                    if previous_move:
+                        #print(f"🟢 Detected move to: {event_path} (from {previous_move})")
+                        labels = _dcache_get_stat(event_path)["labels"]
+                        if "test-ckan" in labels:
+                            update_ckan_location(ckan_conn, previous_move, event_path)
+                        previous_move = None
+                    else:
+                        print(f"⚠️ IN_MOVED_TO detected without a previous IN_MOVED_FROM: {event_path}")
+                elif "IN_DELETE" in line:
+                    print(f"🔴 Detected delete: {event_path}")
+                    dcache_warning_ckan(event_path, ckan_conn)
+                else:
+                    continue
+
     except KeyboardInterrupt:
         print("\n🛑 Listener stopped by user.")
+    
+        # Delete the channel after stopping
+        try:
+            delete_cmd = ["ada"]
+            if auth_type == "macaroon":
+                delete_cmd += ["--tokenfile", str(auth_file)]
+            elif auth_type == "netrc":
+                delete_cmd += ["--netrc", str(auth_file)]
+            delete_cmd += ["--delete-channel", channel]
+    
+            print(f"🗑️ Deleting dCache event channel '{channel}' …")
+            subprocess.run(delete_cmd, check=True)
+            print(f"✅ Channel '{channel}' deleted successfully.")
+        except subprocess.CalledProcessError as exc:
+            print(f"❌ Failed to delete channel '{channel}': {exc}")
     except subprocess.CalledProcessError as exc:
         print(f"❌ Listener failed: {exc}")
-
-def has_label(stat_dict: dict, label: str) -> bool:
-    """
-    Check if a given label exists in the dCache stat dictionary.
-
-    Args:
-        stat_dict (dict): Output from _dcache_get_stat
-        label (str): Label to check
-
-    Returns:
-        bool: True if label exists, False otherwise
-    """
-    labels = stat_dict.get("labels", [])
-    return label in labels
-
 
 def get_checksum(stat_dict: dict, algorithm: str = "ADLER32") -> str | None:
     """
@@ -196,3 +223,114 @@ def get_checksum(stat_dict: dict, algorithm: str = "ADLER32") -> str | None:
         if chk.get("type") == algorithm:
             return chk.get("value")
     return None
+
+def parse_inotify_path(event_line: str) -> str:
+    """
+    Extract the dCache path from an inotify-style event line.
+
+    Args:
+        event_line (str): Line like 
+        "inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/bla1.txt  IN_MOVED_TO  cookie:eVh"
+
+    Returns:
+        str: The path portion
+    """
+    # Split by whitespace and take all but the last part (the event)
+    parts = event_line.rsplit()
+    print(parts[1])
+    return parts[1].strip()
+
+
+def update_ckan_location(ckan: Ckan, old_path: str, new_path: str, verbose: bool = False):
+    """
+    Locate a CKAN dataset whose extras['location'] contains the old_path,
+    and update it to use new_path instead.
+
+    This function is NOT part of the Ckan class.
+    """
+
+    # 1) Find dataset by old PNFS path
+    match = ckan.find_dataset_by_dcache_path(old_path)
+    if not match:
+        return
+    dataset = match["dataset"]
+    dataset_id = dataset["name"]
+    extras = dataset.get("extras", [])
+
+    # Extract the existing URL from extras
+    old_location = None
+    for ex in extras:
+        if ex.get("key") == "location":
+            old_location = ex.get("value")
+            break
+
+    # 2) Build new URL (replace only the PNFS part)
+    new_location = old_location.replace(old_path, new_path)
+
+    if verbose:
+        print(f"🔄 Updating dataset '{dataset_id}':")
+        print(f"   Old location: {old_location}")
+        print(f"   New location: {new_location}")
+
+    # 3) Update the dataset dict
+    updated_extras = []
+    for ex in extras:
+        if ex.get("key") == "location":
+            updated_extras.append({"key": "location", "value": new_location})
+        else:
+            updated_extras.append(ex)
+
+    dataset["extras"] = updated_extras
+
+    # Perform update
+    try:
+        ckan.update_dataset(dataset)
+        print(f"✅ Successfully updated location for dataset '{dataset_id}'.")
+    except Exception as e:
+        print(f"❌ Failed to update dataset '{dataset_id}': {e}")
+
+
+from datetime import datetime
+
+def dcache_warning_ckan(event_path: str, ckan_conn):
+    """
+    Add a CKAN metadata entry to indicate that a file was deleted from dCache.
+
+    Parameters
+    ----------
+    event_path : str
+        The full PNFS path of the deleted file.
+    ckan_conn : Ckan
+        An authenticated CKAN connection instance.
+    """
+    # Find the dataset corresponding to this dCache path
+    result = ckan_conn.find_dataset_by_dcache_path(event_path)
+    if not result:
+        print(f"⚠️ No CKAN dataset found for path: {event_path}")
+        return
+
+    dataset = result["dataset"]
+    dataset_id = dataset["id"]
+
+    # Create a unique strong key using timestamp
+    timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    key = f"!!!DELETED_WARNING_{timestamp}"
+
+    # Value contains the warning icon and path
+    value = f"❌ File deleted from dCache: {event_path} at {timestamp}"
+
+    # Prepare metadata
+    metadata = { "extras": [{ "key": key, "value": value }] }
+
+    # Update CKAN dataset
+    try:
+        # Merge with existing extras to avoid duplicates
+        existing_extras = dataset.get("extras", [])
+        existing_extras.append({"key": key, "value": value})
+        dataset["extras"] = existing_extras
+
+        ckan_conn.update_dataset(dataset)
+        print(f"✅ CKAN dataset '{dataset_id}' updated with deletion warning.")
+    except Exception as e:
+        print(f"❌ Failed to update CKAN dataset '{dataset_id}': {e}")
+
