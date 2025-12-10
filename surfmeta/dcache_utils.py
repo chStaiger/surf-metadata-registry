@@ -32,12 +32,11 @@ def require_dcache_tools():
 # ----------------------------------------------------------------------
 # Internal Helper
 # ----------------------------------------------------------------------
-def _run_dcache_cmd(ada_args: list[str], check_success: str | None = None) -> str:
+def _run_dcache_cmd(ada_args: list[str]) -> str:
     """Run an ADA command using authentication from CKAN config.
 
     Args:
         ada_args: List of ADA subcommand arguments, including file paths.
-        check_success: Optional string to check for success (case-insensitive).
 
     Returns:
         stdout of ADA
@@ -92,11 +91,11 @@ def dcache_auth(method: str, file_path: Path, ckan_conf: CKANConf = CKANConf()):
     # Test authentication by listing current directory
     try:
         if method == "macaroon":
-            _run_dcache_cmd(["--list", "."], check_success=None)
+            _run_dcache_cmd(["--list", "."])
             print("✅ Macaroon authentication successful.")
             ckan_conf.set_dcache_auth(macaroon=str(file_path))
         else:
-            _run_dcache_cmd(["--list", "."], check_success=None)
+            _run_dcache_cmd(["--list", "."])
             print("✅ netrc authentication successful.")
             ckan_conf.set_dcache_auth(netrc=str(file_path))
 
@@ -110,7 +109,7 @@ def dcache_label(dcache_path: Path, label: str = "test-ckan"):
     """Add a label to a dCache file or folder."""
     # Build ADA command correctly: filename first, then label
     ada_args = ["--setlabel", dcache_path, label]
-    _run_dcache_cmd(ada_args, check_success="success")
+    _run_dcache_cmd(ada_args)
     print(f"✅ Label '{label}' set successfully on '{dcache_path}'")
 
 
@@ -125,7 +124,7 @@ def _dcache_get_stat(dcache_path: Path) -> dict:
 
 def dcache_checksum(dcache_path: Path) -> tuple[str, str]:
     """Compute checksum of a dCache file."""
-    out = _run_dcache_cmd(["--checksum", str(dcache_path)], check_success="success")
+    out = _run_dcache_cmd(["--checksum", str(dcache_path)])
     for line in out.splitlines():
         if "=" in line:
             parts = line.strip().split()
@@ -133,7 +132,7 @@ def dcache_checksum(dcache_path: Path) -> tuple[str, str]:
             print(f"{algo}, {checksum}")
 
 
-def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchannel"):
+def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchannel"): # pylint: disable=too-many-branches,unused-argument
     """Start a dCache event listener on a given folder.
 
     Parameters
@@ -147,7 +146,6 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
 
     """
     require_dcache_tools()
-    listen_cues = ["IN_DELETE", "IN_MOVED_FROM", "IN_MOVED_TO"]
 
     conf = CKANConf()
     auth_type, auth_file = conf.get_dcache_auth()
@@ -177,24 +175,21 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
                 if not line:
                     continue
 
-                # Extract the path from the line
-                if any(cue in line for cue in listen_cues):
-                    event_path = parse_inotify_path(line)
-                    print(event_path)
-
                 if "IN_MOVED_FROM" in line:
+                    event_path = _parse_inotify_path(line)
                     previous_move = event_path
                     # print(f"🟡 Detected move from: {previous_move}")
                 elif "IN_MOVED_TO" in line:
-                    if previous_move:
+                    event_path = _parse_inotify_path(line)
+                    labels = _dcache_get_stat(event_path)["labels"]
+                    if previous_move and "test-ckan" in labels:
                         # print(f"🟢 Detected move to: {event_path} (from {previous_move})")
-                        labels = _dcache_get_stat(event_path)["labels"]
-                        if "test-ckan" in labels:
-                            update_ckan_location(ckan_conn, previous_move, event_path)
+                        update_ckan_location(ckan_conn, previous_move, event_path)
                         previous_move = None
                     else:
                         print(f"⚠️ IN_MOVED_TO detected without a previous IN_MOVED_FROM: {event_path}")
                 elif "IN_DELETE" in line:
+                    event_path = _parse_inotify_path(line)
                     print(f"🔴 Detected delete: {event_path}")
                     dcache_warning_ckan(event_path, ckan_conn)
                 else:
@@ -202,43 +197,29 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
 
     except KeyboardInterrupt:
         print("\n🛑 Listener stopped by user.")
-
-        # Delete the channel after stopping
-        try:
-            delete_cmd = ["ada"]
-            if auth_type == "macaroon":
-                delete_cmd += ["--tokenfile", str(auth_file)]
-            elif auth_type == "netrc":
-                delete_cmd += ["--netrc", str(auth_file)]
-            delete_cmd += ["--delete-channel", channel]
-
-            print(f"🗑️ Deleting dCache event channel '{channel}' …")
-            subprocess.run(delete_cmd, check=True)
-            print(f"✅ Channel '{channel}' deleted successfully.")
-        except subprocess.CalledProcessError as exc:
-            print(f"❌ Failed to delete channel '{channel}': {exc}")
+        # Delete Channel after stopping
+        _delete_dcache_channel(auth_type, auth_file, channel)
     except subprocess.CalledProcessError as exc:
         print(f"❌ Listener failed: {exc}")
 
 
-def get_checksum(stat_dict: dict, algorithm: str = "ADLER32") -> str | None:
-    """Extract checksum value for a specific algorithm from dCache stat dictionary.
+def _delete_dcache_channel(auth_type, auth_file: Path, channel: str):
+    """Delete the dCache event channel on listener shutdown."""
+    delete_cmd = ["ada"]
+    if auth_type == "macaroon":
+        delete_cmd += ["--tokenfile", str(auth_file)]
+    elif auth_type == "netrc":
+        delete_cmd += ["--netrc", str(auth_file)]
+    delete_cmd += ["--delete-channel", channel]
 
-    Args:
-        stat_dict (dict): Output from _dcache_get_stat
-        algorithm (str): Checksum algorithm, e.g., "ADLER32", "MD5"
+    print(f"🗑️  Deleting dCache event channel '{channel}' …")
+    try:
+        subprocess.run(delete_cmd, check=True)
+        print(f"✅ Channel '{channel}' deleted successfully.")
+    except subprocess.CalledProcessError as exc:
+        print(f"❌ Failed to delete channel '{channel}': {exc}")
 
-    Returns:
-        str | None: Checksum value if found, otherwise None
-
-    """
-    for chk in stat_dict.get("checksums", []):
-        if chk.get("type") == algorithm:
-            return chk.get("value")
-    return None
-
-
-def parse_inotify_path(event_line: str) -> str:
+def _parse_inotify_path(event_line: str) -> str:
     """Extract the dCache path from an inotify-style event line.
 
     Args:

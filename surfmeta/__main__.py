@@ -485,7 +485,7 @@ def cmd_dcache_listen(args):
     dcache_listen(Path(dcache_path), ckan_conn, channel=channel)
 
 
-def cmd_ada_help(args=None):
+def cmd_ada_help(args=None): # pylint: disable=unused-argument
     """Print some useful ADA examples."""
     examples = [
         {
