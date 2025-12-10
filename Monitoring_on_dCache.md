@@ -10,7 +10,7 @@ This information will be used to identify the files which changes and which need
 You can create tokens when authenticated through netrc. Make sure you have an entry like that in your `~/.netrc` file:
 
 ```
-machine dcacheview.grid.surfsara.nl
+machine dcacheview.<your server>.nl
 login <your user name>
 password <your password>
 ```
