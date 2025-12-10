@@ -84,7 +84,7 @@ Now we labeled our data, when do we need to update our ckan?
 1. The file is overwritten and the checksum changed
 
 	⚠️Cannot be implemented⚠️
-	A file in dCache is only updated through a reupload when the content differs. However, then the file is deleted with its labels and recreated without labels. 
+	A file in dCache is only updated through a reupload when the content differs. However, in a reupload the file is deleted with its labels and recreated without labels. Hence, the cue to listen to is gone.
 
 2. The file is moved
 	The cues are `IN_MOVED_FROM ` and the old name, and `IN_MOVED_TO` and the new path. 
