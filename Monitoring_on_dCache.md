@@ -149,20 +149,20 @@ We use a folder `/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata`.
 
 	```
 	surfmeta create /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt --remote
- ⚠️ WARNING: --remote chosen: skipping checksum and system metadata.
- Creating metadata for /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt.
- Enter the system name: dcache
- Dataset name: The Hunting of the Snark
- Author name: Christine
+    ⚠️ WARNING: --remote chosen: skipping checksum and system metadata.
+    Creating metadata for /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt.
+    Enter the system name: dcache
+    Dataset name: The Hunting of the Snark
+    Author name: Christine
 
- 📂 Available Organisations:
-  1) book-club
-  2) maithili-priv
- Select an organisation by number: 1
- Do you want to add the dataset to a group? [y/N]:
- 🆔 UUID: 78ffbab3-1fe7-46ef-a440-9887d344626f 
- 🌐 Name: The Hunting of the Snark
- ✅ Dataset created successfully!
+    📂 Available Organisations:
+    1) book-club
+    2) maithili-priv
+    Select an organisation by number: 1
+    Do you want to add the dataset to a group? [y/N]:
+    🆔 UUID: 78ffbab3-1fe7-46ef-a440-9887d344626f 
+    🌐 Name: The Hunting of the Snark
+    ✅ Dataset created successfully!
 	```
 	Go to your CKAN instance and check the entry!
 
@@ -170,17 +170,17 @@ We use a folder `/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata`.
 
 	```
 	ada --tokenfile  mytoken.conf \
-> --mv /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata.TheHuntingOfTheSnark.txt \
-> /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/
+    > --mv /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata.TheHuntingOfTheSnark.txt \
+    > /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/
 	```
 	
 	In the listener you will see that the event is picked up and the listener informs us that some metadata has been updated:
 	
 	```
 	/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt
-/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
-Running ADA command: ada --netrc /Users/christine/.netrc --stat /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
-✅ Successfully updated location for dataset '78ffbab3-1fe7-46ef-a440-9887d344626f'.
+	/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
+	Running ADA command: ada --netrc /Users/christine/.netrc --stat /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt	
+	✅ Successfully updated location for dataset '78ffbab3-1fe7-46ef-a440-9887d344626f'.
 	```
 	Check it on the CKAN server. Indeed the `location` entry changed.
 	
@@ -188,15 +188,15 @@ Running ADA command: ada --netrc /Users/christine/.netrc --stat /pnfs/grid.sara.
 	
 	```
 	ada --tokenfile  mytoken.conf \
---delete /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
+	--delete /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
 	```
 	
 	Again the listener picks the event up:
 	
 	```
 	/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
-🔴 Detected delete: /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
-✅ CKAN dataset '6edd3fe9-adc7-4da9-9269-af505f3e9aa5' updated with deletion warning.
+	🔴 Detected delete: /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
+	✅ CKAN dataset '6edd3fe9-adc7-4da9-9269-af505f3e9aa5' updated with deletion warning.
 	```
 	
 	Your CKAN entry now carries a warning tag, that the `location` does not exist any longer.
