@@ -215,7 +215,12 @@ surfmeta delete d24468e0-e708-41ba-ace4-cc11cecafc15 -k prov:wasGeneratedBy
 If you want to create some metadata for spider or snellius, please install the client on the infrastructure and use as above.
 Tje metadata will be automatically extended wirth system information that enables you to download the files and folders for which you created the metadata.
 
+# Monitoring of registered data
+
+We provide a manual and an example workflow [here](Monitoring_on_dCache.md).
+
 # Known Issues
+
 
 ## The spider platform
 The spider platform does not provide version 3.13 or higher for python.

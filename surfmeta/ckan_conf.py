@@ -31,6 +31,7 @@ class CKANConf:
                 ckan_conf = json.load(f)
                 self.ckans = ckan_conf["ckans"]
                 self.cur_ckan = ckan_conf.get("cur_ckan", DEMO_CKAN)
+                self.dcache = ckan_conf.get("dcache", ("netrc", "~/.netrc"))
         except Exception as exc:  # pylint: disable=broad-exception-caught
             warnings.warn(f"{self.config_path} not found or invalid. Resetting. Reason: {exc}")
             self.reset()
@@ -82,13 +83,41 @@ class CKANConf:
         """Reset configuration to defaults."""
         self.ckans = {DEMO_CKAN: {"alias": "demo"}}
         self.cur_ckan = DEMO_CKAN
+        self.dcache = ("netrc", "~/.netrc")
         self.save()
 
+    def set_dcache_auth(self, macaroon: str = None, netrc: str = None):
+        """Set dCache authentication for a CKAN entry.
+
+        Only one method can be set at a time. Passing None will remove the previous setting.
+        """
+        if macaroon and netrc:
+            raise ValueError("Cannot set both macaroon and netrc at the same time.")
+        if macaroon:
+            self.dcache = ("macaroon", str(macaroon))
+        elif netrc:
+            self.dcache = ("netrc", str(netrc))
+        self.save()
+
+    def get_dcache_auth(self) -> tuple:
+        """Get dCache authentication for a CKAN entry.
+
+        Returns a dict with keys:
+          - 'macaroon' if set
+          - 'netrc' if set
+          - empty dict if none set
+        """
+        method, fname = self.dcache
+        return (method, fname)
+
+    # -----------------------------
+    # Override save to ensure dcache dict exists
+    # -----------------------------
     def save(self):
         """Write configuration to file."""
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.config_path, "w", encoding="utf-8") as f:
-            json.dump({"cur_ckan": self.cur_ckan, "ckans": self.ckans}, f, indent=4)
+            json.dump({"cur_ckan": self.cur_ckan, "ckans": self.ckans, "dcache": self.dcache}, f, indent=4)
 
     def get_entry(self, url_or_alias: Union[str, None] = None) -> tuple[str, dict]:
         """Get a CKAN config by URL or alias."""
