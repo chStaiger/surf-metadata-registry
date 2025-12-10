@@ -87,12 +87,10 @@ class CKANConf:
         self.save()
 
     def set_dcache_auth(self, macaroon: str = None, netrc: str = None):
-        """
-        Set dCache authentication for a CKAN entry.
+        """Set dCache authentication for a CKAN entry.
 
         Only one method can be set at a time. Passing None will remove the previous setting.
         """
-
         if macaroon and netrc:
             raise ValueError("Cannot set both macaroon and netrc at the same time.")
         if macaroon:
@@ -102,8 +100,7 @@ class CKANConf:
         self.save()
 
     def get_dcache_auth(self) -> tuple:
-        """
-        Get dCache authentication for a CKAN entry.
+        """Get dCache authentication for a CKAN entry.
 
         Returns a dict with keys:
           - 'macaroon' if set

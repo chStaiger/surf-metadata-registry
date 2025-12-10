@@ -20,6 +20,7 @@ from surfmeta.cli_handlers import (
     handle_mdentry_delete_key,
     user_input_meta,
 )
+from surfmeta.dcache_utils import dcache_auth, dcache_checksum, dcache_label, dcache_listen
 from surfmeta.metadata_utils import (
     get_sys_meta,
     input_metadata_extras,
@@ -28,7 +29,6 @@ from surfmeta.metadata_utils import (
 )
 from surfmeta.system_metadata import meta_checksum
 from surfmeta.utils import build_transfer_commands, get_ckan_connection
-from surfmeta.dcache_utils import dcache_auth, dcache_label, dcache_checksum, dcache_listen
 
 CKANCONFIG = CKANConf()
 
@@ -152,54 +152,30 @@ def _add_dcache_subcommands(subparsers):
     p.set_defaults(func=cmd_dcache_auth)
 
     # dcache add label
-    p = dcache_subparsers.add_parser(
-        "addlabel",
-        help="Add a label to a file or folder on dCache"
-    )
+    p = dcache_subparsers.add_parser("addlabel", help="Add a label to a file or folder on dCache")
+    p.add_argument("dcache_path", help="Path on dCache to label (e.g., /pnfs/.../file)")
     p.add_argument(
-        "dcache_path",
-        help="Path on dCache to label (e.g., /pnfs/.../file)"
-    )
-    p.add_argument(
-        "label",
-        nargs="?",
-        default="test-ckan",
-        help="Label to add to the file/folder (default: test-ckan)"
+        "label", nargs="?", default="test-ckan", help="Label to add to the file/folder (default: test-ckan)"
     )
     p.set_defaults(func=cmd_dcache_label)
 
     # dcache checksum
-    p = dcache_subparsers.add_parser(
-        "checksum",
-        help="Get checksum."
-    )
-    p.add_argument(
-        "dcache_path",
-        help="Path on dCache to label (e.g., /pnfs/.../file)"
-    )
+    p = dcache_subparsers.add_parser("checksum", help="Get checksum.")
+    p.add_argument("dcache_path", help="Path on dCache to label (e.g., /pnfs/.../file)")
     p.set_defaults(func=cmd_dcache_checksum)
 
     # dcache listen
-    p = dcache_subparsers.add_parser(
-        "listen",
-        help="Start listening for dCache events on a folder"
-    )
+    p = dcache_subparsers.add_parser("listen", help="Start listening for dCache events on a folder")
+    p.add_argument("dcache_path", help="Path on dCache to listen for events")
     p.add_argument(
-        "dcache_path",
-        help="Path on dCache to listen for events"
-    )
-    p.add_argument(
-        "--channel",
-        default="tokenchannel",
-        help="Name of the event channel (default: tokenchannel)"
+        "--channel", default="tokenchannel", help="Name of the event channel (default: tokenchannel)"
     )
     p.set_defaults(func=cmd_dcache_listen)
 
-    p = dcache_subparsers.add_parser(
-        "ada-help",
-        help = "Some useful ada examples."
-    )
+    p = dcache_subparsers.add_parser("ada-help", help="Some useful ada examples.")
     p.set_defaults(func=cmd_ada_help)
+
+
 # -----------------------------
 # Dataset Subcommand Registration
 # -----------------------------
@@ -473,19 +449,24 @@ def cmd_get(args):
 
 
 def cmd_dcache_auth(args):
+    """Authenticate dcache user."""
     if args.macaroon:
         dcache_auth("macaroon", args.macaroon)
     elif args.netrc:
         dcache_auth("netrc", args.netrc)
 
+
 def cmd_dcache_label(args):
+    """Add a default label for ckan to dCache data."""
     if not getattr(args, "dcache_path", None):
         print("❌ dCache path is required.")
         sys.exit(1)
     label = getattr(args, "label", "test-ckan") or "test-ckan"
     dcache_label(args.dcache_path, label)
 
+
 def cmd_dcache_checksum(args):
+    """Retrieve checksum and its algorithm from dCache."""
     if not getattr(args, "dcache_path", None):
         print("❌ dCache path is required.")
         sys.exit(1)
@@ -493,6 +474,7 @@ def cmd_dcache_checksum(args):
 
 
 def cmd_dcache_listen(args):
+    """Create a channel to listen to changes and push then through to ckan."""
     dcache_path = getattr(args, "dcache_path", None)
     if not dcache_path:
         print("❌ dCache path is required to listen for events.")
@@ -502,32 +484,33 @@ def cmd_dcache_listen(args):
     channel = getattr(args, "channel", "tokenchannel")  # default channel
     dcache_listen(Path(dcache_path), ckan_conn, channel=channel)
 
+
 def cmd_ada_help(args=None):
     """Print some useful ADA examples."""
     examples = [
         {
             "description": "Remove a channel / listener",
-            "command": "ada --tokenfile test-macaroon-token.conf --delete-channel mychannel"
+            "command": "ada --tokenfile test-macaroon-token.conf --delete-channel mychannel",
         },
         {
             "description": "List all channels",
-            "command": "ada --tokenfile test-macaroon-token.conf --channels"
-        }
-        ,
+            "command": "ada --tokenfile test-macaroon-token.conf --channels",
+        },
         {
             "description": "Remove file",
-            "command": "ada --tokenfile  test-macaroon-token.conf --delete <filename>"
+            "command": "ada --tokenfile  test-macaroon-token.conf --delete <filename>",
         },
         {
             "description": "List current working directory",
-            "command": "ada --tokenfile  test-macaroon-token.conf --list ."
-        }
+            "command": "ada --tokenfile  test-macaroon-token.conf --list .",
+        },
     ]
 
     print("\n💡 Useful ADA examples:\n")
     for ex in examples:
         print(f"🔹 {ex['description']}:")
         print(f"    {ex['command']}\n")
+
 
 # -----------------------------
 # Helper Functions

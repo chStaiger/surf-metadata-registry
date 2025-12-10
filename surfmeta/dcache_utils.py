@@ -1,5 +1,4 @@
-"""
-Utility functions for dcache-related operations.
+"""Utility functions for dcache-related operations.
 
 These functions are used by the `surfmeta dcache` CLI commands and provide:
 - Tool availability checks
@@ -8,13 +7,16 @@ These functions are used by the `surfmeta dcache` CLI commands and provide:
 - File/folder operations on dCache
 """
 
+import json
 import shutil
 import subprocess
 import sys
-import json
+from datetime import datetime
 from pathlib import Path
-from surfmeta.ckan_conf import CKANConf
+
 from surfmeta.ckan import Ckan
+from surfmeta.ckan_conf import CKANConf
+
 
 # ----------------------------------------------------------------------
 # Tool Requirements
@@ -26,12 +28,12 @@ def require_dcache_tools():
         print(f"❌ Missing required tools: {', '.join(missing)}")
         sys.exit(1)
 
+
 # ----------------------------------------------------------------------
 # Internal Helper
 # ----------------------------------------------------------------------
 def _run_dcache_cmd(ada_args: list[str], check_success: str | None = None) -> str:
-    """
-    Run an ADA command using authentication from CKAN config.
+    """Run an ADA command using authentication from CKAN config.
 
     Args:
         ada_args: List of ADA subcommand arguments, including file paths.
@@ -42,6 +44,7 @@ def _run_dcache_cmd(ada_args: list[str], check_success: str | None = None) -> st
 
     Raises:
         RuntimeError if command fails or success string not found
+
     """
     require_dcache_tools()
     conf = CKANConf()
@@ -70,11 +73,12 @@ def _run_dcache_cmd(ada_args: list[str], check_success: str | None = None) -> st
 
     return stdout
 
+
 # ----------------------------------------------------------------------
 # High-Level dCache Actions
 # ----------------------------------------------------------------------
 def dcache_auth(method: str, file_path: Path, ckan_conf: CKANConf = CKANConf()):
-    """Setup dCache authentication and save it in CKAN config."""
+    """Authenticate with dCache and save the parametersin CKAN config."""
     require_dcache_tools()
     if method not in ("macaroon", "netrc"):
         print(f"❌ Invalid auth method '{method}'. Must be 'macaroon' or 'netrc'.")
@@ -101,12 +105,14 @@ def dcache_auth(method: str, file_path: Path, ckan_conf: CKANConf = CKANConf()):
         print(f"❌ Authentication failed: {exc}")
         sys.exit(1)
 
+
 def dcache_label(dcache_path: Path, label: str = "test-ckan"):
     """Add a label to a dCache file or folder."""
     # Build ADA command correctly: filename first, then label
     ada_args = ["--setlabel", dcache_path, label]
     _run_dcache_cmd(ada_args, check_success="success")
     print(f"✅ Label '{label}' set successfully on '{dcache_path}'")
+
 
 def _dcache_get_stat(dcache_path: Path) -> dict:
     """Retrieve dCache stat information."""
@@ -115,6 +121,7 @@ def _dcache_get_stat(dcache_path: Path) -> dict:
         return json.loads(out)
     except RuntimeError as exc:
         raise RuntimeError from exc
+
 
 def dcache_checksum(dcache_path: Path) -> tuple[str, str]:
     """Compute checksum of a dCache file."""
@@ -127,12 +134,17 @@ def dcache_checksum(dcache_path: Path) -> tuple[str, str]:
 
 
 def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchannel"):
-    """
-    Start a dCache event listener on a given folder.
+    """Start a dCache event listener on a given folder.
 
-    Args:
-        dcache_path (Path): Folder on dCache to listen to
-        channel (str): Name of the event channel (default: "tokenchannel")
+    Parameters
+    ----------
+    dcache_path : Path
+        The PNFS folder path to monitor.
+    ckan_conn : Ckan
+        An authenticated CKAN connection instance, used to update datasets.
+    channel : str, optional
+        The name of the dCache notification channel to listen to (default is "tokenchannel").
+
     """
     require_dcache_tools()
     listen_cues = ["IN_DELETE", "IN_MOVED_FROM", "IN_MOVED_TO"]
@@ -172,10 +184,10 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
 
                 if "IN_MOVED_FROM" in line:
                     previous_move = event_path
-                    #print(f"🟡 Detected move from: {previous_move}")
+                    # print(f"🟡 Detected move from: {previous_move}")
                 elif "IN_MOVED_TO" in line:
                     if previous_move:
-                        #print(f"🟢 Detected move to: {event_path} (from {previous_move})")
+                        # print(f"🟢 Detected move to: {event_path} (from {previous_move})")
                         labels = _dcache_get_stat(event_path)["labels"]
                         if "test-ckan" in labels:
                             update_ckan_location(ckan_conn, previous_move, event_path)
@@ -190,7 +202,7 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
 
     except KeyboardInterrupt:
         print("\n🛑 Listener stopped by user.")
-    
+
         # Delete the channel after stopping
         try:
             delete_cmd = ["ada"]
@@ -199,7 +211,7 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
             elif auth_type == "netrc":
                 delete_cmd += ["--netrc", str(auth_file)]
             delete_cmd += ["--delete-channel", channel]
-    
+
             print(f"🗑️ Deleting dCache event channel '{channel}' …")
             subprocess.run(delete_cmd, check=True)
             print(f"✅ Channel '{channel}' deleted successfully.")
@@ -208,9 +220,9 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
     except subprocess.CalledProcessError as exc:
         print(f"❌ Listener failed: {exc}")
 
+
 def get_checksum(stat_dict: dict, algorithm: str = "ADLER32") -> str | None:
-    """
-    Extract checksum value for a specific algorithm from dCache stat dictionary.
+    """Extract checksum value for a specific algorithm from dCache stat dictionary.
 
     Args:
         stat_dict (dict): Output from _dcache_get_stat
@@ -218,22 +230,24 @@ def get_checksum(stat_dict: dict, algorithm: str = "ADLER32") -> str | None:
 
     Returns:
         str | None: Checksum value if found, otherwise None
+
     """
     for chk in stat_dict.get("checksums", []):
         if chk.get("type") == algorithm:
             return chk.get("value")
     return None
 
+
 def parse_inotify_path(event_line: str) -> str:
-    """
-    Extract the dCache path from an inotify-style event line.
+    """Extract the dCache path from an inotify-style event line.
 
     Args:
-        event_line (str): Line like 
+        event_line (str): Line like
         "inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/bla1.txt  IN_MOVED_TO  cookie:eVh"
 
     Returns:
         str: The path portion
+
     """
     # Split by whitespace and take all but the last part (the event)
     parts = event_line.rsplit()
@@ -242,13 +256,27 @@ def parse_inotify_path(event_line: str) -> str:
 
 
 def update_ckan_location(ckan: Ckan, old_path: str, new_path: str, verbose: bool = False):
-    """
-    Locate a CKAN dataset whose extras['location'] contains the old_path,
-    and update it to use new_path instead.
+    """Update the 'location' field of a CKAN dataset from an old PNFS path to a new one.
 
+    This function searches all datasets for an `extras` entry where the key 'location'
+    contains `old_path`. If found, it updates that entry to use `new_path` instead.
+
+    Parameters
+    ----------
+    ckan : Ckan
+        An authenticated CKAN connection instance used to modify datasets.
+    old_path : str
+        The PNFS path currently stored in the dataset's 'location' extra.
+    new_path : str
+        The new PNFS path to replace the old one in the dataset.
+    verbose : bool, optional
+        If True, prints status messages, by default False.
+
+    Notes
+    -----
     This function is NOT part of the Ckan class.
-    """
 
+    """
     # 1) Find dataset by old PNFS path
     match = ckan.find_dataset_by_dcache_path(old_path)
     if not match:
@@ -289,12 +317,8 @@ def update_ckan_location(ckan: Ckan, old_path: str, new_path: str, verbose: bool
     except Exception as e:
         print(f"❌ Failed to update dataset '{dataset_id}': {e}")
 
-
-from datetime import datetime
-
 def dcache_warning_ckan(event_path: str, ckan_conn):
-    """
-    Add a CKAN metadata entry to indicate that a file was deleted from dCache.
+    """Add a CKAN metadata entry to indicate that a file was deleted from dCache.
 
     Parameters
     ----------
@@ -302,6 +326,7 @@ def dcache_warning_ckan(event_path: str, ckan_conn):
         The full PNFS path of the deleted file.
     ckan_conn : Ckan
         An authenticated CKAN connection instance.
+
     """
     # Find the dataset corresponding to this dCache path
     result = ckan_conn.find_dataset_by_dcache_path(event_path)
@@ -319,9 +344,6 @@ def dcache_warning_ckan(event_path: str, ckan_conn):
     # Value contains the warning icon and path
     value = f"❌ File deleted from dCache: {event_path} at {timestamp}"
 
-    # Prepare metadata
-    metadata = { "extras": [{ "key": key, "value": value }] }
-
     # Update CKAN dataset
     try:
         # Merge with existing extras to avoid duplicates
@@ -333,4 +355,3 @@ def dcache_warning_ckan(event_path: str, ckan_conn):
         print(f"✅ CKAN dataset '{dataset_id}' updated with deletion warning.")
     except Exception as e:
         print(f"❌ Failed to update CKAN dataset '{dataset_id}': {e}")
-
