@@ -19,7 +19,7 @@ password <your password>
 When authenticating with a macaroon, it is important (for now) to **NOT** use the flag `--chroot`:
 
 ```
-get-macaroon --url https://webdav.grid.surfsara.nl:2880/pnfs/grid.sara.nl/data/<path to folder> --duration P7D     --user <username> --permissions DOWNLOAD,UPLOAD,DELETE,MANAGE,LIST,READ_METADATA,UPDATE_METADATA,STAGE --output rclone  <token file name>
+get-macaroon --url https://<webdavserver>:2880/pnfs/grid.sara.nl/data/<path to folder> --duration P7D     --user <username> --permissions DOWNLOAD,UPLOAD,DELETE,MANAGE,LIST,READ_METADATA,UPDATE_METADATA,STAGE --output rclone  <token file name>
 ```
 
 Diasadvantage is: you will have to address all your data by their absolute path.
