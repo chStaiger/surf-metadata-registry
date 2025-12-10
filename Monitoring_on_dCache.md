@@ -57,7 +57,7 @@ ada --tokenfile  test-macaroon-token.conf \
 If you already created a channel for the directory you will see this logging information:
 
 ```
-inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TwentyThousandLeaguesUnderTheSea.txt  IN_ATTRIB
+inotify  /pnfs/<path to>/TwentyThousandLeaguesUnderTheSea.txt  IN_ATTRIB
 ```
 
 We also need some state information about the data. Here we will use the checksum. Retrieve the checksum from dCACHE for the file and add it to your metadata in CKAN:
@@ -94,8 +94,8 @@ Now we labeled our data, when do we need to update our ckan?
 	**Channel output**
 	
 	```
-	inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TwentyThousandLeaguesUnderTheSea.txt  IN_MOVED_FROM  cookie:xuOcESo9Aoz80JuGW8gKxg
-inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/Twenty_old.txt  IN_MOVED_TO  cookie:xuOcESo9Aoz80JuGW8gKxg
+	inotify  /pnfs/<path to>/TwentyThousandLeaguesUnderTheSea.txt  IN_MOVED_FROM  cookie:xuOcESo9Aoz80JuGW8gKxg
+inotify  /pnfs/<path to>/Twenty_old.txt  IN_MOVED_TO  cookie:xuOcESo9Aoz80JuGW8gKxg
 	```
 
 
@@ -105,7 +105,7 @@ inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/Twenty_old.txt  I
    
    **Channel output**
    ```
-   inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/Alice1.txt  IN_DELETE
+   inotify  /pnfs/<path to>/Alice1.txt  IN_DELETE
    ```
    
    
@@ -113,14 +113,14 @@ inotify  /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/Twenty_old.txt  I
 
 In this workflow we show how you can monitor a folder with data which has been referenced in CKAN.
 
-We use a folder `/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata`.
+We use a folder `/pnfs/<path to>/cs-testdata`.
 
 1. Start the listener:
 
    ```
-   surfmeta dcache listen --channel test-api /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata
+   surfmeta dcache listen --channel test-api /pnfs/<path to>/cs-testdata
    
-   🎧 Listening to dCache events on '/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata' (channel: test-api) …
+   🎧 Listening to dCache events on '/pnfs/<path to>/cs-testdata' (channel: test-api) …
    ```
 
 2. Upload a file to that location and label it with `ckan-test`. This label is the default label for the `surfmeta` command. If you use`ada`, please check the spelling!
@@ -133,24 +133,24 @@ We use a folder `/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata`.
    Confirm that the data is there:
    
    ```
-   ada --tokenfile  mytoken.conf --list /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata
+   ada --tokenfile  mytoken.conf --list /pnfs/<path to>/cs-testdata
    ```
    
    Label the data:
    
    ```sh
-   surfmeta dcache addlabel /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt
+   surfmeta dcache addlabel /pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt
 
-    Running ADA command: ada --netrc /Users/christine/.netrc --setlabel /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt test-ckan
+    Running ADA command: ada --netrc /Users/christine/.netrc --setlabel /pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt test-ckan
 
-   ✅ Label 'test-ckan' set successfully on '/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt'
+   ✅ Label 'test-ckan' set successfully on '/pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt'
    ```
 3.	Now you can register the data in CKAN:
 
 	```
-	surfmeta create /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt --remote
+	surfmeta create /pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt --remote
     ⚠️ WARNING: --remote chosen: skipping checksum and system metadata.
-    Creating metadata for /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt.
+    Creating metadata for /pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt.
     Enter the system name: dcache
     Dataset name: The Hunting of the Snark
     Author name: Christine
@@ -170,16 +170,16 @@ We use a folder `/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata`.
 
 	```
 	ada --tokenfile  mytoken.conf \
-    > --mv /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata.TheHuntingOfTheSnark.txt \
-    > /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/
+    > --mv /pnfs/<path to>/cs-testdata.TheHuntingOfTheSnark.txt \
+    > /pnfs/<path to>/cs-testdata/
 	```
 	
 	In the listener you will see that the event is picked up and the listener informs us that some metadata has been updated:
 	
 	```
-	/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt
-	/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
-	Running ADA command: ada --netrc /Users/christine/.netrc --stat /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt	
+	/pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt
+	/pnfs/<path to>/cs-testdata/book.txt
+	Running ADA command: ada --netrc /Users/christine/.netrc --stat /pnfs/<path to>/cs-testdata/book.txt	
 	✅ Successfully updated location for dataset '78ffbab3-1fe7-46ef-a440-9887d344626f'.
 	```
 	Check it on the CKAN server. Indeed the `location` entry changed.
@@ -188,14 +188,14 @@ We use a folder `/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata`.
 	
 	```
 	ada --tokenfile  mytoken.conf \
-	--delete /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
+	--delete /pnfs/<path to>/cs-testdata/book.txt
 	```
 	
 	Again the listener picks the event up:
 	
 	```
-	/pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
-	🔴 Detected delete: /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/book.txt
+	/pnfs/<path to>/cs-testdata/book.txt
+	🔴 Detected delete: /pnfs/<path to>/cs-testdata/book.txt
 	✅ CKAN dataset '6edd3fe9-adc7-4da9-9269-af505f3e9aa5' updated with deletion warning.
 	```
 	
