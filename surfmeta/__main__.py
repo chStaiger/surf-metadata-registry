@@ -10,6 +10,7 @@ from pathlib import Path
 from ckanapi import NotAuthorized, NotFound, ValidationError
 
 from surfmeta.ckan import Ckan
+from surfmeta.dcache import DCache
 from surfmeta.ckan_conf import CKANConf, show_available
 from surfmeta.cli_handlers import (
     create_dataset,
@@ -20,7 +21,6 @@ from surfmeta.cli_handlers import (
     handle_mdentry_delete_key,
     user_input_meta,
 )
-from surfmeta.dcache import DCache
 from surfmeta.metadata_utils import (
     get_sys_meta,
     input_metadata_extras,
