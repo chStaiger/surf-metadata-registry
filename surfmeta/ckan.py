@@ -492,8 +492,8 @@ class Ckan:
         except Exception as e:
             raise HTTPError(f"Error deleting metadata key '{key}': {e}") from e
 
-    def find_dataset_by_dcache_path(self, dcache_path: str) -> Optional[dict]:
-        """Find a CKAN dataset that contains a resource pointing to the given PNFS path.
+    def find_dataset_by_dcache_path(self, dcache_path: str) -> list[dict]:
+        """Find all CKAN datasets that contain a resource pointing to the given PNFS path.
 
         The PNFS path is matched inside extras['location'], regardless of
         the WebDAV hostname or port.
@@ -506,17 +506,18 @@ class Ckan:
 
         Returns
         -------
-        dict or None
+        list of dict
+            Each entry has:
             {
-               "dataset": <dataset dict>,
-               "location": <extras entry dict>
+                "dataset": <dataset dict>,
+                "location": <extras entry dict>
             }
-            or None if not found.
+            Returns an empty list if no datasets match.
 
         """
         needle = dcache_path.strip()
-
         datasets = self.list_all_datasets(include_private=True)
+        matches = []
 
         for ds in datasets:
             extras = ds.get("extras", [])
@@ -527,10 +528,13 @@ class Ckan:
 
                 if key == "location" and isinstance(value, str):
                     # Check if PNFS path occurs inside the WebDAV URL
-                    if needle in value:
-                        return {
-                            "dataset": ds,
-                            "location": ex,
-                        }
+                    if value.endswith(needle):
+                        matches.append(
+                            {
+                                "dataset": ds,
+                                "location": ex,
+                            }
+                        )
+                        break  # avoid duplicate matches from the same dataset
 
-        return None
+        return matches
