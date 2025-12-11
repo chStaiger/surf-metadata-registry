@@ -35,10 +35,12 @@ def calculate_local_checksum(file_path: Path, algorithm: str = "sha256") -> str:
     """Calculate the checksum of a file using the given hashing algorithm.
 
     Args:
+    ----
         file_path (Path): Path to the file.
         algorithm (str): Hashing algorithm (e.g., 'md5', 'sha1', 'sha256').
 
     Returns:
+    -------
         str: Hex digest of the checksum.
 
     """
@@ -59,15 +61,18 @@ def calculate_remote_checksum(host: str, username: str, file_path: Path, algorit
     """Calculate a checksum for a file on a remote host using SSH.
 
     Args:
+    ----
         host (str): The remote hostname or IP address.
         username (str): SSH username.
         file_path (Path): Remote file path.
         algorithm (str): Hash algorithm ('sha256', 'md5', 'sha1', etc.).
 
     Returns:
+    -------
         str: The checksum (hex digest) of the remote file.
 
     Raises:
+    ------
         RuntimeError: If SSH or checksum command fails.
 
     """

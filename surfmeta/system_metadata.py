@@ -57,6 +57,7 @@ def meta_checksum(
     Can calculate checksum locally or remotely over SSH.
 
     Args:
+    ----
         meta (dict): Metadata dictionary to update.
         file_path (Path): Path to the file (local or remote).
         remote (bool): If True, calculate checksum remotely.
@@ -65,6 +66,7 @@ def meta_checksum(
         algorithm (str): Hash algorithm (default: 'md5').
 
     Returns:
+    -------
         dict: Updated metadata dictionary.
 
     """

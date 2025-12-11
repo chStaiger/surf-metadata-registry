@@ -20,7 +20,7 @@ from surfmeta.cli_handlers import (
     handle_mdentry_delete_key,
     user_input_meta,
 )
-from surfmeta.dcache_utils import dcache_auth, dcache_checksum, dcache_label, dcache_listen
+from surfmeta.dcache import DCache
 from surfmeta.metadata_utils import (
     get_sys_meta,
     input_metadata_extras,
@@ -451,9 +451,9 @@ def cmd_get(args):
 def cmd_dcache_auth(args):
     """Authenticate dcache user."""
     if args.macaroon:
-        dcache_auth("macaroon", args.macaroon)
+        DCache.set_auth(CKANCONFIG, "macaroon", "args.macaroon")
     elif args.netrc:
-        dcache_auth("netrc", args.netrc)
+        DCache.set_auth(CKANCONFIG, "netrc", args.netrc)
 
 
 def cmd_dcache_label(args):
@@ -462,16 +462,16 @@ def cmd_dcache_label(args):
         print("❌ dCache path is required.")
         sys.exit(1)
     label = getattr(args, "label", "test-ckan") or "test-ckan"
-    dcache_label(args.dcache_path, label)
-
+    dcache = DCache()
+    dcache.set_label(args.dcache_path, label)
 
 def cmd_dcache_checksum(args):
     """Retrieve checksum and its algorithm from dCache."""
     if not getattr(args, "dcache_path", None):
         print("❌ dCache path is required.")
         sys.exit(1)
-    dcache_checksum(args.dcache_path)
-
+    dcache = DCache()
+    print(dcache.get_checksum(args.dcache_path))
 
 def cmd_dcache_listen(args):
     """Create a channel to listen to changes and push then through to ckan."""
@@ -479,11 +479,10 @@ def cmd_dcache_listen(args):
     if not dcache_path:
         print("❌ dCache path is required to listen for events.")
         sys.exit(1)
-    ckan_conn = get_ckan_connection()
 
     channel = getattr(args, "channel", "tokenchannel")  # default channel
-    dcache_listen(Path(dcache_path), ckan_conn, channel=channel)
-
+    dcache = DCache()
+    dcache.listen(dcache_path, channel=channel)
 
 def cmd_ada_help(args=None): # pylint: disable=unused-argument
     """Print some useful ADA examples."""
