@@ -82,7 +82,7 @@ class DCache:
     # ------------------------------------------------------------------
     # Authentication
     # ------------------------------------------------------------------
-    def _validate_auth(self):
+    def _validate_auth(self, silent = True):
         """Private: Check whether the current CKAN config authentication works."""
         if not self.auth_file.exists():
             raise FileNotFoundError(f"Authentication file not found: {self.auth_file}")
@@ -90,7 +90,8 @@ class DCache:
         try:
             # Test authentication by listing the root directory
             self._run_dcache_cmd(["--list", "."])
-            print(f"✅ {self.auth_type} authentication is valid.")
+            if not silent:
+                print(f"✅ {self.auth_type} authentication is valid.")
         except RuntimeError as exc:
             raise RuntimeError(f"Authentication test failed: {exc}") from exc
 
@@ -121,7 +122,7 @@ class DCache:
         temp_instance.auth_file = file_path
 
         try:
-            temp_instance._validate_auth()
+            temp_instance._validate_auth(silent = False)
             # Save to CKAN configuration
             if method == "macaroon":
                 ckan_conf.set_dcache_auth(macaroon=str(file_path))
@@ -248,6 +249,7 @@ class DCache:
                             previous_move = None
                     elif "IN_DELETE" in line:
                         event_path = self._parse_inotify_path(line)
+                        print(f"🔴 Detected delete: {event_path}")
                         self._dcache_warning_ckan(event_path)
             # some fails
             if "is not a directory." in line:
@@ -266,7 +268,12 @@ class DCache:
 
     def _delete_channel(self, channel: str):
         print(f"🗑️ Deleting dCache event channel '{channel}' …")
-        self._run_dcache_cmd(["--delete-channel", channel])
+        try:
+            self._run_dcache_cmd(["--delete-channel", channel])
+            print(f"✅ Channel '{channel}' deleted successfully.")
+        except RuntimeError as exc:
+            print(f"❌ Failed to set authentication: {exc}")
+            raise
 
     # ------------------------------------------------------------------
     # CKAN Integration
@@ -308,7 +315,7 @@ class DCache:
 
         for match in matches:
             dataset = match["dataset"]
-            dataset_id = match["id"]
+            dataset_id = dataset["name"]
 
             timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
             key = f"!!!DELETED_WARNING_{timestamp}"
