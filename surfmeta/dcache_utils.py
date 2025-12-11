@@ -182,7 +182,6 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
                 elif "IN_MOVED_TO" in line:
                     event_path = _parse_inotify_path(line)
                     labels = _dcache_get_stat(event_path)["labels"]
-                    print("DEBUG", previous_move, labels)
                     if previous_move:
                         if "test-ckan" in labels:
                             # print(f"🟢 Detected move to: {event_path} (from {previous_move})")
