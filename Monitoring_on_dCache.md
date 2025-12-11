@@ -119,6 +119,19 @@ In this workflow we show how you can monitor a folder with data which has been r
 
 We use a folder `/pnfs/<path to>/cs-testdata`.
 
+Before we can use `surfmeta` to interact with dCache, we need to tell the client with which method we want to authenticate with dCache and where to find the authententication file:
+
+```
+surfmeta dcache auth --netrc ~/.netrc
+
+# or
+
+surfmeta dcache auth --macaroon mytoken.conf 
+```
+This informstion will be saved and if your authentication does not change, e.g. you token expires or you need to access a different location, you will not have to re-authenticate.
+
+Now we can sart the workflow:
+
 1. Start the listener:
 
    ```
