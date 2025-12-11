@@ -132,7 +132,7 @@ def dcache_checksum(dcache_path: Path) -> tuple[str, str]:
             print(f"{algo}, {checksum}")
 
 
-def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchannel"): # pylint: disable=too-many-branches,unused-argument
+def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchannel"):  # pylint: disable=too-many-branches,unused-argument
     """Start a dCache event listener on a given folder.
 
     Parameters
@@ -220,6 +220,7 @@ def _delete_dcache_channel(auth_type, auth_file: Path, channel: str):
     except subprocess.CalledProcessError as exc:
         print(f"❌ Failed to delete channel '{channel}': {exc}")
 
+
 def _parse_inotify_path(event_line: str) -> str:
     """Extract the dCache path from an inotify-style event line.
 
@@ -259,45 +260,48 @@ def update_ckan_location(ckan: Ckan, old_path: str, new_path: str, verbose: bool
 
     """
     # 1) Find dataset by old PNFS path
-    match = ckan.find_dataset_by_dcache_path(old_path)
-    if not match:
+    matches = ckan.find_dataset_by_dcache_path(old_path)
+    if not matches:
         print(f"⚠️ No CKAN dataset found for path: {old_path}")
         return
-    dataset = match["dataset"]
-    dataset_id = dataset["name"]
-    extras = dataset.get("extras", [])
 
-    # Extract the existing URL from extras
-    old_location = None
-    for ex in extras:
-        if ex.get("key") == "location":
-            old_location = ex.get("value")
-            break
+    for match in matches:
+        dataset = match["dataset"]
+        dataset_id = dataset["name"]
+        extras = dataset.get("extras", [])
 
-    # 2) Build new URL (replace only the PNFS part)
-    new_location = old_location.replace(old_path, new_path)
+        # Extract the existing URL from extras
+        old_location = None
+        for ex in extras:
+            if ex.get("key") == "location":
+                old_location = ex.get("value")
+                break
 
-    if verbose:
-        print(f"🔄 Updating dataset '{dataset_id}':")
-        print(f"   Old location: {old_location}")
-        print(f"   New location: {new_location}")
+        # 2) Build new URL (replace only the PNFS part)
+        new_location = old_location.replace(old_path, new_path)
 
-    # 3) Update the dataset dict
-    updated_extras = []
-    for ex in extras:
-        if ex.get("key") == "location":
-            updated_extras.append({"key": "location", "value": new_location})
-        else:
-            updated_extras.append(ex)
+        if verbose:
+            print(f"🔄 Updating dataset '{dataset_id}':")
+            print(f"   Old location: {old_location}")
+            print(f"   New location: {new_location}")
 
-    dataset["extras"] = updated_extras
+        # 3) Update the dataset dict
+        updated_extras = []
+        for ex in extras:
+            if ex.get("key") == "location":
+                updated_extras.append({"key": "location", "value": new_location})
+            else:
+                updated_extras.append(ex)
 
-    # Perform update
-    try:
-        ckan.update_dataset(dataset)
-        print(f"✅ Successfully updated location for dataset '{dataset_id}'.")
-    except Exception as e:
-        print(f"❌ Failed to update dataset '{dataset_id}': {e}")
+        dataset["extras"] = updated_extras
+
+        # Perform update
+        try:
+            ckan.update_dataset(dataset)
+            print(f"✅ Successfully updated location for dataset '{dataset_id}'.")
+        except Exception as e:
+            print(f"❌ Failed to update dataset '{dataset_id}': {e}")
+
 
 def dcache_warning_ckan(event_path: str, ckan_conn):
     """Add a CKAN metadata entry to indicate that a file was deleted from dCache.
