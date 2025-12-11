@@ -2,9 +2,13 @@
 [![Python package](https://github.com/chStaiger/surf-metadata-registry/actions/workflows/linter.yml/badge.svg)](https://github.com/chStaiger/surf-metadata-registry/actions/workflows/linter.yml)
 
 This package installs a client with which you can create some descriptive metadata for data files and folders you stored on SURF data and compute infrastrcuture.
-Currently implemented SURF systems:
+Currently automatically detected (SURF) systems:
 - Snellius
 - Spider
+- ResearchCloud
+- Local computers
+
+Data other systems can also be described by this client. We give an example how to create metadata for data on [dCache and how to "listen" to changes on that system](Monitoring_on_dCache.md).
 
 # Dpendencies
 
@@ -89,7 +93,7 @@ To activate it with a token, please generate one under your CKAN user in the web
 ```
 surfmeta ckan init alias_or_url
 ```
-You will be asked to copy your token, Note, it will not be shown!
+You will be asked to copy your token. Note, it will not be shown!
 
 
 ## Create a minimal metadata entry for a file on your computer
