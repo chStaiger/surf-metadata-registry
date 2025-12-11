@@ -10,7 +10,7 @@ Currently automatically detected (SURF) systems:
 
 Data other systems can also be described by this client. We give an example how to create metadata for data on [dCache and how to "listen" to changes on that system](Monitoring_on_dCache.md).
 
-# Dpendencies
+# Dependencies
 
 - Requires python 3.13 or higher because of the module `ckanapi`.
 - `ckanapi`
