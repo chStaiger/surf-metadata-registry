@@ -150,6 +150,7 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
     conf = CKANConf()
     auth_type, auth_file = conf.get_dcache_auth()
     auth_file = Path(auth_file).expanduser().resolve()
+    print(auth_type, auth_file)
     if not auth_file.exists():
         raise RuntimeError(f"Authentication file not found: {auth_file}")
 
@@ -169,7 +170,7 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
 
     try:
         # Run the listener and capture output line by line
-        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as proc:
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as proc:    
             for line in proc.stdout:
                 line = line.strip()
                 if not line:
@@ -195,14 +196,18 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
                     dcache_warning_ckan(event_path, ckan_conn)
                 else:
                     continue
-
+        raise subprocess.CalledProcessError(returncode=1,
+                                            cmd="dcache listen",
+                                            output=f"Channel {channel} already exists."
+                                            )
     except KeyboardInterrupt:
         print("\n🛑 Listener stopped by user.")
         # Delete Channel after stopping
         _delete_dcache_channel(auth_type, auth_file, channel)
     except subprocess.CalledProcessError as exc:
         print(f"❌ Listener failed: {exc}")
-
+        msg = exc.stderr or exc.output
+        print("  Message:", msg.decode() if hasattr(msg, "decode") else msg)
 
 def _delete_dcache_channel(auth_type, auth_file: Path, channel: str):
     """Delete the dCache event channel on listener shutdown."""
