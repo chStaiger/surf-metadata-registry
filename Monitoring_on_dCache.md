@@ -1,13 +1,14 @@
 # Monitoring on dCache
+Once we created some metadata entry in CKAN for a file or folder, the file or folder can of course change over time. The locatin can be updated, the content, i.e. the checksum, can change or in the worst case the data can be deleted. We need to be informed of such actions and adjust the metadata in CKAN.
+
 To monitor data on dCache one needs to create a channel which listens to a folder and logs all activities in that folder.
-
-This information will be used to identify the files which changes and which need to be updated in CKAN.
-
+This information will be used to identify the files which change and for which we need to updated the metadata entry in CKAN.
 
 ## Authentication
 
+dCache allows two ways to authenticate, by netrc file or by a token called *macaroon*. In both cases you will need your dCache password.
+
 ### netrc
-You can create tokens when authenticated through netrc. Make sure you have an entry like that in your `~/.netrc` file:
 
 ```
 machine dcacheview.<your server>.nl
@@ -16,7 +17,7 @@ password <your password>
 ```
 
 ### Macaroon
-When authenticating with a macaroon, it is important (for now) to **NOT** use the flag `--chroot`:
+When authenticating with a macaroon, it is important (for now) to **NOT** use the flag `--chroot`, this conflicts with command to create a dCache channel which we need to listen to changes. You will be asked in the prompt to provide your password:
 
 ```
 get-macaroon --url https://<webdavserver>:2880/pnfs/<path to folder> \
@@ -81,12 +82,13 @@ In this tutorial I will add that information manually to CKAN:
 
 Now we labeled our data, when do we need to update our ckan?
 
-1. The file is overwritten and the checksum changed
+1. **The file is overwritten** and the checksum changed
 
 	⚠️Cannot be implemented⚠️
 	A file in dCache is only updated through a reupload when the content differs. However, in a reupload the file is deleted with its labels and recreated without labels. Hence, the cue to listen to is gone.
 
-2. The file is moved
+2. **The file is renamed**
+   
 	The cues are `IN_MOVED_FROM ` and the old name, and `IN_MOVED_TO` and the new path. 
 	
 	Next we need to check the label which we will find in the `stat` under the section `labels`:
@@ -103,7 +105,7 @@ inotify  /pnfs/<path to>/Twenty_old.txt  IN_MOVED_TO  cookie:xuOcESo9Aoz80JuGW8g
 	```
 
 
-3. The file removed
+3. **The file is deleted**
 
 	Listen to the `IN_DELETE` cue, check if this file was registered in CKAN. Since the file is gone, we cannot check the label, but we have to check if the location existed in CKAN and  update the CKAN entry with a remark that the file no longer exists.
    
@@ -129,6 +131,7 @@ surfmeta dcache auth --netrc ~/.netrc
 surfmeta dcache auth --macaroon mytoken.conf 
 ```
 This informstion will be saved and if your authentication does not change, e.g. you token expires or you need to access a different location, you will not have to re-authenticate.
+**Use `surfmeta dcache auth -h`** if you are unsuare how to setup your dCache authentication.
 
 Now we can sart the workflow:
 
@@ -162,10 +165,40 @@ Now we can sart the workflow:
 
    ✅ Label 'test-ckan' set successfully on '/pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt'
    ```
+
+   Optionally, you can also retrieve the checksum to add it to the metadata in Step 3:
+
+   ```
+   surfmeta dcache checksum /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt
+   Running ADA command: ada --netrc /Users/christine/.netrc --checksum /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt
+   ADLER32, bf6dc298
+	```
+
+
+	If you wish to add the checksum and other descriptive metadata to your entry in CKAN, we need to provide that information in a specifically formatted `json` file. With the command below you can generate the metadata file. Please note that the value behind the key `checksum` needs to be a list:
+
+   ``` 
+   surfmeta create-md mymetadata.json
+	Add Prov-O metadata (leave blank to skip any field):
+	prov:wasGeneratedBy: Christine
+	prov:wasDerivedFrom: None
+	prov:startedAtTime:
+	prov:endedAtTime:
+	prov:actedOnBehalfOf:
+	prov:SoftwareAgent:
+
+	Add your own metadata (key-value pairs). Type 'done' as key to finish.
+	Key: checksum
+	Value: [ADLER32, bf6dc298]
+	Key: done	
+	✅ Metadata saved to: mymetadata.json
+   ```
+	
+   
 3.	Now you can register the data in CKAN:
 
 	```
-	surfmeta create /pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt --remote
+	surfmeta create https://webdav.grid.surfsara.nl:2880/pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt --remote --metafile mymetadata.json
     ⚠️ WARNING: --remote chosen: skipping checksum and system metadata.
     Creating metadata for /pnfs/<path to>/cs-testdata/TheHuntingOfTheSnark.txt.
     Enter the system name: dcache
@@ -183,7 +216,24 @@ Now we can sart the workflow:
 	```
 	Go to your CKAN instance and check the entry!
 
-4. Let us try out what happens if we use the `ada` commands to **rename** the file:
+	Since we registered the data with the webdav endpoint, we can also add the  webdav as protocol which enables the client to build the download command for us. Again call `surfmeta create-md mymetadata.json` and add
+
+    ```
+	Add your own metadata (key-value pairs). Type 'done' as key to finish.
+	Key: protocol
+	Value: webdav
+	Key: done
+	✅ Metadata saved to: mymetadata.json
+    ```
+	And update (patch) the metadata entry in CKAN:
+
+	```
+	surfmeta update 78ffbab3-1fe7-46ef-a440-9887d344626f --metafile mymetadata.json
+ 	```
+
+ 	If you use `surfmeta get 78ffbab3-1fe7-46ef-a440-9887d344626f`, you will see two options how to download the data from the webdav endpoint.
+
+4. Let us try out what happens if we use the `ada` commands to **rename** the file on dCache:
 
 	```
 	ada --tokenfile  mytoken.conf \
