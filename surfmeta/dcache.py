@@ -92,7 +92,7 @@ class DCache:
             self._run_dcache_cmd(["--list", "."])
             print(f"✅ {self.auth_type} authentication is valid.")
         except RuntimeError as exc:
-            raise RuntimeError(f"Authentication test failed: {exc}")
+            raise RuntimeError(f"Authentication test failed: {exc}") from exc
 
     @classmethod
     def set_auth(cls, ckan_conf: CKANConf, method: str, file_path: Path):
@@ -196,7 +196,7 @@ class DCache:
     # ------------------------------------------------------------------
     # Event Listening
     # ------------------------------------------------------------------
-    def listen(self, dcache_path: Path, channel: str = "tokenchannel"):
+    def listen(self, dcache_path: Path, channel: str = "tokenchannel"): # pylint: disable=too-many-branches
         """Listen for dCache filesystem events on a directory.
 
         Starts an ADA event listener for the given dCache path and processes
@@ -232,6 +232,7 @@ class DCache:
         previous_move = None
 
         try:
+            line = ""
             with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as proc:
                 for line in proc.stdout:
                     line = line.strip()
@@ -251,12 +252,12 @@ class DCache:
             # some fails
             if "is not a directory." in line:
                 raise NotADirectoryError(line)
-            elif "ERROR: channel name 'tokenchannel' is already used." in line:
+            if "ERROR: channel name 'tokenchannel' is already used." in line:
                 raise KeyError(
                     f"ERROR: channel name {channel} is already used. For delete see surfmeta dcache ada-help."
                 )
-            else:
-                raise Exception(line)
+            if line != "":
+                raise Exception(line) # pylint: disable=broad-exception-raised
         except KeyboardInterrupt:
             print("\n🛑 Listener stopped by user.")
             self._delete_channel(channel)
@@ -300,27 +301,28 @@ class DCache:
                 print(f"❌ Failed to update dataset '{dataset_id}': {e}")
 
     def _dcache_warning_ckan(self, event_path: str):
-        result = self.ckan.find_dataset_by_dcache_path(event_path)
-        if not result:
+        matches = self.ckan.find_dataset_by_dcache_path(event_path)
+        if not matches:
             print(f"⚠️ No CKAN dataset found for path: {event_path}")
             return
 
-        dataset = result["dataset"]
-        dataset_id = dataset["id"]
+        for match in matches:
+            dataset = match["dataset"]
+            dataset_id = match["id"]
 
-        timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-        key = f"!!!DELETED_WARNING_{timestamp}"
-        value = f"❌ File deleted from dCache: {event_path} at {timestamp}"
+            timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+            key = f"!!!DELETED_WARNING_{timestamp}"
+            value = f"❌ File deleted from dCache: {event_path} at {timestamp}"
 
-        existing_extras = dataset.get("extras", [])
-        existing_extras.append({"key": key, "value": value})
-        dataset["extras"] = existing_extras
+            existing_extras = dataset.get("extras", [])
+            existing_extras.append({"key": key, "value": value})
+            dataset["extras"] = existing_extras
 
-        try:
-            self.ckan.update_dataset(dataset)
-            print(f"✅ CKAN dataset '{dataset_id}' updated with deletion warning.")
-        except Exception as e:
-            print(f"❌ Failed to update CKAN dataset '{dataset_id}': {e}")
+            try:
+                self.ckan.update_dataset(dataset)
+                print(f"✅ CKAN dataset '{dataset_id}' updated with deletion warning.")
+            except Exception as e:
+                print(f"❌ Failed to update CKAN dataset '{dataset_id}': {e}")
 
     # ------------------------------------------------------------------
     # Helpers
