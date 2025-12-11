@@ -261,7 +261,7 @@ def update_ckan_location(ckan: Ckan, old_path: str, new_path: str, verbose: bool
     # 1) Find dataset by old PNFS path
     match = ckan.find_dataset_by_dcache_path(old_path)
     if not match:
-        print(f"⚠️ INFO: No CKAN entry for {old_path} found.")
+        print(f"⚠️ No CKAN dataset found for path: {event_path}")
         return
     dataset = match["dataset"]
     dataset_id = dataset["name"]
