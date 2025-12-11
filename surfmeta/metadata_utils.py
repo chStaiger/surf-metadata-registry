@@ -42,12 +42,15 @@ def load_and_validate_flat_json(json_path: Path) -> List[Dict[str, str]]:
     extras dictionaries: [{'key': ..., 'value': ...}, ...].
 
     Args:
+    ----
         json_path (Path): Path to the JSON metafile.
 
     Returns:
+    -------
         List[Dict[str, str]]: List of CKAN key/value entries.
 
     Raises:
+    ------
         ValueError: If the JSON is invalid or contains nested structures.
         json.JSONDecodeError: If the file is not valid JSON.
         OSError: If the file cannot be read.
