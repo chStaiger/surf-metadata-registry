@@ -211,20 +211,9 @@ def dcache_listen(dcache_path: Path, ckan_conn: Ckan, channel: str = "tokenchann
 
 def _delete_dcache_channel(auth_type, auth_file: Path, channel: str):
     """Delete the dCache event channel on listener shutdown."""
-    delete_cmd = ["ada"]
-    if auth_type == "macaroon":
-        delete_cmd += ["--tokenfile", str(auth_file)]
-    elif auth_type == "netrc":
-        delete_cmd += ["--netrc", str(auth_file)]
-    delete_cmd += ["--delete-channel", channel]
-
+    delete_cmd = ["--delete-channel", channel]
     print(f"🗑️  Deleting dCache event channel '{channel}' …")
-    try:
-        subprocess.run(delete_cmd, check=True)
-        print(f"✅ Channel '{channel}' deleted successfully.")
-    except subprocess.CalledProcessError as exc:
-        print(f"❌ Failed to delete channel '{channel}': {exc}")
-
+    _run_dcache_cmd(delete_cmd)
 
 def _parse_inotify_path(event_line: str) -> str:
     """Extract the dCache path from an inotify-style event line.
