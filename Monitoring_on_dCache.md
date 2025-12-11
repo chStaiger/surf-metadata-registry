@@ -267,15 +267,3 @@ Now we can sart the workflow:
 	```
 	
 	Your CKAN entry now carries a warning tag, that the `location` does not exist any longer.
-
-	
-	
-   
-   
- 
-
-   
-
-
-
- 
