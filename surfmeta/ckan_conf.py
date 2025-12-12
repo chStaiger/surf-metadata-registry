@@ -31,7 +31,7 @@ class CKANConf:
                 ckan_conf = json.load(f)
                 self.ckans = ckan_conf["ckans"]
                 self.cur_ckan = ckan_conf.get("cur_ckan", DEMO_CKAN)
-                self.dcache = ckan_conf.get("dcache", ("netrc", "~/.netrc"))
+                self.dcache = ckan_conf.get("dcache", None)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             warnings.warn(f"{self.config_path} not found or invalid. Resetting. Reason: {exc}")
             self.reset()
@@ -107,8 +107,14 @@ class CKANConf:
           - 'netrc' if set
           - empty dict if none set
         """
-        method, fname = self.dcache
-        return (method, fname)
+        try:
+            method, fname = self.dcache
+            return (method, fname)
+        except (ValueError, AttributeError) as exc:
+            raise ValueError(
+                "dCache credentials not stored properly.\n"
+                "Run 'surfmeta dcache auth'."
+            ) from exc
 
     # -----------------------------
     # Override save to ensure dcache dict exists

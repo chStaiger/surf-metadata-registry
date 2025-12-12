@@ -40,10 +40,16 @@ class DCache:
         self.ckan_conf = ckan_conf
         self.ckan = get_ckan_connection()
         self._require_dcache_tools()
-        self.auth_type, self.auth_file = self.ckan_conf.get_dcache_auth()
-        self.auth_file = Path(self.auth_file).expanduser().resolve()
-        self._validate_auth()
-
+        try:
+            self.auth_type, self.auth_file = self.ckan_conf.get_dcache_auth()
+            self.auth_file = Path(self.auth_file).expanduser().resolve()
+            self._validate_auth()
+        except TypeError as exc:
+            raise TypeError(
+                "dCache credentials are not configured properly.\n"
+                "Please run 'surfmeta dcache auth' or configure them programmatically "
+                "using DCache.set_auth(...)."
+            ) from exc
     # ------------------------------------------------------------------
     # Tool Requirements
     # ------------------------------------------------------------------
@@ -117,7 +123,7 @@ class DCache:
             raise FileNotFoundError(f"Authentication file not found: {file_path}")
 
         # Create a temporary instance for validation
-        temp_instance = cls(ckan_conf)
+        temp_instance = cls.__new__(cls)
         temp_instance.auth_type = method
         temp_instance.auth_file = file_path
 
