@@ -12,6 +12,8 @@ Data other systems can also be described by this client. We give an example how 
 
 In the Section [Example Workflow](#example-workflow) we show how a user can identify data which belongs to the same project but is scattered across different storage systems and subsequently transfer the data to where it is needed. 
 
+**⚠️ Please note that this is prototype software, it is only meant for demonstrations and testing features. ⚠️**
+
 # Dependencies
 
 - Requires python 3.13 or higher because of the module `ckanapi`.
@@ -69,6 +71,8 @@ Available commands:
     search     Search CKAN datasets
     update     Update metadata for an existing dataset
     delete     Delete a dataset or metadata key from CKAN
+    get        Information how to retrieve data from the systems.
+    dcache     Commands to monitor a dCache folder and registered files.
 
 Examples:
   surfmeta ckan list
