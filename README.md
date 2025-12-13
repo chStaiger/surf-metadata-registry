@@ -10,6 +10,8 @@ Currently automatically detected (SURF) systems:
 
 Data other systems can also be described by this client. We give an example how to create metadata for data on [dCache and how to "listen" to changes on that system](Monitoring_on_dCache.md).
 
+In the Section [Example Workflow](#example-workflow) we show how a user can identify data which belongs to the same project but is scattered across different storage systems and subsequently transfer the data to where it is needed. 
+
 # Dependencies
 
 - Requires python 3.13 or higher because of the module `ckanapi`.
@@ -253,7 +255,7 @@ uv run surfmeta
 
 All `surfmeta` commands need to be run through `uv run`.
 
-## Example workflow
+# Example workflow
 Once you described your data on different storage systems with this commandline interface, you can search for your data and retrieve it again when needed. Below we show a little workflow in which we assume that data has been labeled with `ProjectID` is `bookanalysis`.
 
 We search for all data carrying the word `bookanalysis`:
