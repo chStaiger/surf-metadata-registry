@@ -261,7 +261,7 @@ Once you described your data on different storage systems with this commandline 
 We search for all data carrying the word `bookanalysis`:
 
 ```
-surfmeta search -k bookanaly
+surfmeta search -k bookanalysis
 sis
 Found 3 datasets:
 
@@ -275,7 +275,7 @@ TwentyThousandLeagues   df77bdac-a3b9-41b6-9396-71f4d80de5af  book-club  dcache
 Instead of using the `list`command and figure out how to retrieve the data, we can use the `get` command. We can also enter our username on the system in question and set a download location:
 
 ```
-surfmeta get 7658e0fc-32d0-4d48-840f-90930343d259 --username cstaiger2 --dest ~/Downloads
+surfmeta get 7658e0fc-32d0-4d48-840f-90930343d259 --username user --dest ~/Downloads
 
 📦 Dataset: ThroughTheLookingGlass
 📁 Destination: /Users/christine/Downloads
@@ -283,15 +283,15 @@ surfmeta get 7658e0fc-32d0-4d48-840f-90930343d259 --username cstaiger2 --dest ~/
 Available transfer commands:
 
   • SCP:
-      scp cstaiger2@snellius.surf.nl:/gpfs/home5/cstaiger2/ThroughTheLookingGlass.txt /Users/christine/Downloads
+      scp user@snellius.surf.nl:/path to/ThroughTheLookingGlass.txt /Users/localuser/Downloads
 
   • RSYNC:
-      rsync -avz cstaiger2@snellius.surf.nl:/gpfs/home5/cstaiger2/ThroughTheLookingGlass.txt /Users/christine/Downloads
+      rsync -avz user@snellius.surf.nl:/path to/ThroughTheLookingGlass.txt /Users/localuser/Downloads
 ```
 
 Now we can copy paste the command and retrieve the data:
 
 ```
-scp cstaiger2@snellius.surf.nl:/gpfs/home5/cstaiger2/ThroughTheLookingGlass.txt /Users/christine/Downloads
+scp user@snellius.surf.nl:/path to/ThroughTheLookingGlass.txt /Users/localuser/Downloads
 ThroughTheLookingGlass.txt            100%  164KB   1.7MB/s   00:00
 ```
