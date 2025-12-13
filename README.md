@@ -256,7 +256,7 @@ uv run surfmeta
 All `surfmeta` commands need to be run through `uv run`.
 
 # Example workflow
-Once you described your data on different storage systems with this commandline interface, you can search for your data and retrieve it again when needed. Below we show a little workflow in which we assume that data has been labeled with `ProjectID` is `bookanalysis`.
+Once you described your data on different storage systems with this commandline interface, you can search for your data and retrieve it again when needed. Below we show a little workflow in which we assume that data has been labeled with the key `ProjectID` and its value `bookanalysis`.
 
 We search for all data carrying the word `bookanalysis`:
 
