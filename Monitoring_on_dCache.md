@@ -1,5 +1,5 @@
 # Monitoring on dCache
-Once we created some metadata entry in CKAN for a file or folder, the file or folder can of course change over time. The locatin can be updated, the content, i.e. the checksum, can change or in the worst case the data can be deleted. We need to be informed of such actions and adjust the metadata in CKAN.
+Once we created a metadata entry in CKAN for a file or folder, the file or folder can of course change over time. The location can be updated, the content, i.e. the checksum, can change or in the worst case the data can be deleted. We need to be informed of such actions and adjust the metadata in CKAN.
 
 To monitor data on dCache one needs to create a channel which listens to a folder and logs all activities in that folder.
 This information will be used to identify the files which change and for which we need to updated the metadata entry in CKAN.
@@ -17,7 +17,7 @@ password <your password>
 ```
 
 ### Macaroon
-When authenticating with a macaroon, it is important (for now) to **NOT** use the flag `--chroot`, this conflicts with command to create a dCache channel which we need to listen to changes. You will be asked in the prompt to provide your password:
+When authenticating with a macaroon, it is important (for now) to **NOT** use the flag `--chroot`, this conflicts with the command to create a dCache channel which we need to listen to changes. You will be asked in the prompt to provide your password:
 
 ```
 get-macaroon --url https://<webdavserver>:2880/pnfs/<path to folder> \
@@ -27,7 +27,7 @@ get-macaroon --url https://<webdavserver>:2880/pnfs/<path to folder> \
 			 --output rclone  <token file name>
 ```
 
-Diasadvantage is: you will have to address all your data by their absolute path.
+Diasadvantage: you will have to address all your data by their absolute path.
 
 ## Create a channel
 
@@ -45,7 +45,7 @@ ada --tokenfile  <token file name>.conf --channels
 
 ## Prepare your data
 
-We do not want to act on each event on any file, but only those which are registered in CKAN. To find them you need to create a label and attach it to the files in question. Here we use the label `test_ckan` and attach it to one file in the folder that is monitored by the channel. 
+We do not want to act on each event of any file, but only those which are registered in CKAN. To find them you need to create a label and attach it to the files in question. Here we use the label `test-ckan` and attach it to one file in the folder that is monitored by the channel. 
 
 We will label:
 
@@ -55,7 +55,7 @@ ada --tokenfile  <token file name>.conf  --list .
 TwentyThousandLeaguesUnderTheSea.txt```
 
 ada --tokenfile  test-macaroon-token.conf \
-    --setlabel TwentyThousandLeaguesUnderTheSea.txt test_ckan
+    --setlabel TwentyThousandLeaguesUnderTheSea.txt test-ckan
 
 ```
 
@@ -73,14 +73,14 @@ ada --tokenfile  test-macaroon-token.conf --checksum TwentyThousandLeaguesUnderT
 TwentyThousandLeaguesUnderTheSea.txt  ADLER32=19ed54dc
 ```
 
-In this tutorial I will add that information manually to CKAN:
+In this tutorial we will add that information manually to CKAN:
 1. Navigate to your entry in CKAN and hit the `Manage` button
 2. Add a new `Custom Field` with key `checksum` and entry `[adler32, <value>]`
 3. Click `Update Dataset`
 
 ## Actions to listen to
 
-Now we labeled our data, when do we need to update our ckan?
+Now we labeled our data, when do we need to update our CKAN entry?
 
 1. **The file is overwritten** and the checksum changed
 
@@ -93,21 +93,21 @@ Now we labeled our data, when do we need to update our ckan?
 	
 	Next we need to check the label which we will find in the `stat` under the section `labels`:
 	```
-	ada --tokenfile  test-macaroon-token.conf --stat <new name>.txt
+	ada --tokenfile  test-macaroon-token.conf --stat <filename>.txt
 	```
 	If our label appears in there, we need to update the location in CKAN.
 	
 	**Channel output**
-	
+	Two consequitive lines to monitor.
 	```
 	inotify  /pnfs/<path to>/TwentyThousandLeaguesUnderTheSea.txt  IN_MOVED_FROM  cookie:xuOcESo9Aoz80JuGW8gKxg
-inotify  /pnfs/<path to>/Twenty_old.txt  IN_MOVED_TO  cookie:xuOcESo9Aoz80JuGW8gKxg
+	inotify  /pnfs/<path to>/Twenty_old.txt  IN_MOVED_TO  cookie:xuOcESo9Aoz80JuGW8gKxg
 	```
 
 
 3. **The file is deleted**
 
-	Listen to the `IN_DELETE` cue, check if this file was registered in CKAN. Since the file is gone, we cannot check the label, but we have to check if the location existed in CKAN and  update the CKAN entry with a remark that the file no longer exists.
+	Listen to the `IN_DELETE` cue, check if this file was registered in CKAN. Since the file is gone, we cannot check the label, but we have to check if the location existed in CKAN and update the CKAN entry with a remark that the file no longer exists.
    
    **Channel output**
    ```
@@ -171,7 +171,7 @@ Now we can sart the workflow:
    ```
    surfmeta dcache checksum /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt
    Running ADA command: ada --netrc /Users/christine/.netrc --checksum /pnfs/grid.sara.nl/data/surfadvisors/disk/cs-testdata/TheHuntingOfTheSnark.txt
-   ADLER32, bf6dc298
+   ["ADLER32", "bf6dc298"]
 	```
 
 
@@ -189,7 +189,7 @@ Now we can sart the workflow:
 
 	Add your own metadata (key-value pairs). Type 'done' as key to finish.
 	Key: checksum
-	Value: [ADLER32, bf6dc298]
+	Value: ["ADLER32", "bf6dc298"]
 	Key: done	
 	✅ Metadata saved to: mymetadata.json
    ```
@@ -249,7 +249,7 @@ Now we can sart the workflow:
 	Running ADA command: ada --netrc /Users/christine/.netrc --stat /pnfs/<path to>/cs-testdata/book.txt	
 	✅ Successfully updated location for dataset '78ffbab3-1fe7-46ef-a440-9887d344626f'.
 	```
-	Check it on the CKAN server. Indeed the `location` entry changed.
+	Check it on the CKAN server! Indeed the `location` entry changed.
 	
 5. Let us **delete** the file:
 	
