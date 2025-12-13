@@ -69,6 +69,8 @@ Available commands:
     search     Search CKAN datasets
     update     Update metadata for an existing dataset
     delete     Delete a dataset or metadata key from CKAN
+    get        Information how to retrieve data from the systems.
+    dcache     Commands to monitor a dCache folder and registered files.
 
 Examples:
   surfmeta ckan list
