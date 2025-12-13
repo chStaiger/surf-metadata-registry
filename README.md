@@ -185,13 +185,13 @@ To find and explore metadata entries we have the commands `surfmeta search` and 
 surfmeta search -k local
 Found 2 datasets:
 
-Title            UUID                                  Organization  Groups
+Title            UUID                                  Organization  System
 ---------------------------------------------------------------------------
-Sherlock Holmes  1fd0e173-8873-4619-ab38-bfda5a47a8cc  book-club  analysis-data
-Book collection  d24468e0-e708-41ba-ace4-cc11cecafc15  book-club  <no groups>
+Sherlock Holmes  1fd0e173-8873-4619-ab38-bfda5a47a8cc  book-club  local or not defined
+Book collection  d24468e0-e708-41ba-ace4-cc11cecafc15  book-club  local or not defined
 ```
 
-To further onspect the metadata of the Sherlock Holmes files use the UUID in the command `list`:
+To further inspect the metadata of the Sherlock Holmes files use the UUID in the command `list`:
 
 ```
 surfmeta list 1fd0e173-8873-4619-ab38-bfda5a47a8cc
@@ -211,7 +211,7 @@ User Metadata:
 ```
 
 ## Delete
-You can delete whole metadata entrues or just single keys and their values. In the example below we
+You can delete whole metadata entries or just single keys and their values. In the example below we
 remove one of the Prov-O keys and its value:
 
 ```
@@ -223,7 +223,7 @@ surfmeta delete d24468e0-e708-41ba-ace4-cc11cecafc15 -k prov:wasGeneratedBy
 
 ## Spider and Snellius
 If you want to create some metadata for spider or snellius, please install the client on the infrastructure and use as above.
-Tje metadata will be automatically extended wirth system information that enables you to download the files and folders for which you created the metadata.
+The metadata will be automatically extended with system information that enables you to download the files and folders for which you created the metadata.
 
 # Monitoring of registered data
 
@@ -234,7 +234,7 @@ We provide a manual and an example workflow [here](Monitoring_on_dCache.md).
 
 ## The spider platform
 The spider platform does not provide version 3.13 or higher for python.
-You can still use the software and run it in a virtual environment. We will use `uv` in the eample below:
+You can still use the software and run it in a virtual environment. We will use `uv` in the example below:
 
 1. Clone the code repository
 
