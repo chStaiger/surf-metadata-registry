@@ -8,7 +8,7 @@ Currently automatically detected (SURF) systems:
 - ResearchCloud
 - Local computers
 
-Data other systems can also be described by this client. We give an example how to create metadata for data on [dCache and how to "listen" to changes on that system](Monitoring_on_dCache.md).
+Data on other systems can also be described by this client. We give an example how to create metadata for data on [dCache and how to "listen" to changes on that system](Monitoring_on_dCache.md).
 
 In the Section [Example Workflow](#example-workflow) we show how a user can identify data which belongs to the same project but is scattered across different storage systems and subsequently transfer the data to where it is needed. 
 
