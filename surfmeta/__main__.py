@@ -182,7 +182,7 @@ def _add_dcache_subcommands(subparsers):
 def _add_dataset_subcommands(subparsers):
     # create
     p = subparsers.add_parser("create", help="Create a new metadata entry interactively in CKAN")
-    p.add_argument("path", type=Path, help="Path for which to create metadata")
+    p.add_argument("path", type=str, help="Path for which to create metadata")
     p.add_argument("--metafile", type=Path, help="Path to a JSON file with additional metadata")
     p.add_argument(
         "--remote",
