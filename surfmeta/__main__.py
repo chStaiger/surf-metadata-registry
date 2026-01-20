@@ -339,9 +339,10 @@ def cmd_create(args):
         sys_meta = {"system_name": system}
         sys_meta["location"] = str(args.path)
     else:
+        path = Path(args.path)
         sys_meta = get_sys_meta()
-        if args.path.is_file():
-            meta_checksum(sys_meta, args.path.resolve())
+        if path.is_file():
+            meta_checksum(sys_meta, path.resolve())
 
     extras = []
     if args.metafile:
