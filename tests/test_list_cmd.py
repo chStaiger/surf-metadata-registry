@@ -34,6 +34,7 @@ def ckan_conn_mock():
         "name": "uuid-1",
         "organization": {"name": "Org1"},
         "groups": [{"name": "groupA"}],
+        "state": "active",
         "extras": [
             {"key": "system_name", "value": "sys1"},
             {"key": "server", "value": "local"},
