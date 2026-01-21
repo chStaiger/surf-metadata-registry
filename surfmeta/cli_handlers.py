@@ -172,6 +172,8 @@ def _print_dataset_info(dataset, system_meta, user_meta, args):
             print(f"  {k:<14}: {v}")
         print()
 
+    if dataset["state"] == "deleted":
+        print("⚠️ WARNING: Dataset marked for deletion/purge.")
 
 # Search utils
 
