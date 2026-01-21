@@ -64,7 +64,7 @@ class Ckan:
         try:
             dataset = self.get_dataset_info(dataset_id)
             print(f"DEBUG: Dataset found: {dataset.get('name', dataset_id)}")
-            if dataset["state"] == "deleted": # the delete command only marks data as deleted and does not purge them
+            if dataset["state"] == "deleted": # api only marks for deletion, data is still there -> exclude
                 return False
             return True
         except NotFound:
@@ -161,7 +161,9 @@ class Ckan:
 
         """
         try:
-            response = self.api.action.package_search(rows=1000, include_private=include_private, fq='state:active')
+            response = self.api.action.package_search(rows=1000,
+                                                      include_private=include_private,
+                                                      fq='state:active')
             datasets = response.get("results", [])
             search_params = {}
             # If limit is higher than 1000, paginate
