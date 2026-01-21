@@ -64,6 +64,8 @@ class Ckan:
         try:
             dataset = self.get_dataset_info(dataset_id)
             print(f"DEBUG: Dataset found: {dataset.get('name', dataset_id)}")
+            if dataset["state"] == "deleted": # api only marks for deletion, data is still there -> exclude
+                return False
             return True
         except NotFound:
             print(f"DEBUG: Dataset '{dataset_id}' not found (NotFound exception raised).")
@@ -159,7 +161,9 @@ class Ckan:
 
         """
         try:
-            response = self.api.action.package_search(rows=1000, include_private=include_private)
+            response = self.api.action.package_search(rows=1000,
+                                                      include_private=include_private,
+                                                      fq='state:active')
             datasets = response.get("results", [])
             search_params = {}
             # If limit is higher than 1000, paginate
@@ -432,7 +436,7 @@ class Ckan:
 
         try:
             print(f"DEBUG: Attempting to delete dataset '{dataset_id}'")
-            self.api.action.package_delete(id=dataset_id, purge=True)
+            self.api.action.package_delete(id=dataset_id)
             print(f"DEBUG: Delete request sent for '{dataset_id}'")
         except NotAuthorized as e:
             raise NotAuthorized(f"Not authorized to delete dataset '{dataset_id}': {e}") from e
